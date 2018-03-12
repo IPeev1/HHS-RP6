@@ -11,11 +11,10 @@
 
 #include <avr/io.h>
 
+// Ivan heeft iets toegevoegd!
 
-int main(void)
-{
-    while (1) 
-    {
+int main(void) {
+    while (1) {
     }
 }
 

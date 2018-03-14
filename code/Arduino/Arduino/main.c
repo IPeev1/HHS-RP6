@@ -1,35 +1,75 @@
 /*
- * Arduino1280_XBEE_LED_TOGGLE.c
+ * Arduino1280 XBEE Communication
  *
  * Created: 3/13/2018 2:02:25 PM
  * Author : mc_he
  */ 
-#define F_CPU 16000000UL		//Clockspeed
+#define F_CPU 16000000UL														//Clock speed
 
+//Libraries
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <util/delay.h>
+#include <math.h>
+#include "matthijs_testFunctions.h" /*Contains funtions for transmitting over USART for testing purposes*/
 
-#define BUILTIN_LED 7
-#define DELAY_TIME 500			//Delay time in milliseconds
+//Definitions
+#define BUFFER_SIZE 255
 
-volatile char letter = 'H';		//Used to toggle LED, H = high, L = low
 
-ISR(USART0_RX_vect) {
+ISR(USART_RX_vect) {															//For Atmega1280 use USART0_RX_VECT, for Atmega168PB use USART_RX_VECT
+	static char buffer[BUFFER_SIZE];											//Character buffer to store numerals
+	static int bufferPos = -1;													//Represents which buffer positions are currently in use to store numerals
+	static char received = 0;													//Stores the last character received through USART
+	static char command = 0;													//Stores a character that represents a command. Default value is null
 	
-	letter = UDR0;				//letter gets value received
+	received = UDR0;
+	
+	if ('0' <= received && received <= '9') {									//If received contains a a numeral
+		
+		if (command == 't') {													//If command 't' is currently set
+			if (bufferPos < BUFFER_SIZE)										//Check to prevent overflow of the buffer
+				buffer[++bufferPos] = received;									//Add numeral to buffer
+		}
+			
+	} else if ('a' <= received && received <= 'z') {							//If received contains a (lower case) letter
+		
+		switch(received) {														//Each valid command is represented by a case
+			
+			case 'w':
+			case 'a':
+			case 's':
+			case 'd':
+			case 't':
+			command = received;
+		}
+	} else if (received == '\r') {												//If received contains a carriage return
+		
+		uint16_t intValue = 0;													//Value to be passed over I2C with the command. Default value is 0.
+		
+		if (command == 't') {													//If the command is 't', the buffer is converted to an integer and stored in intValue
+			uint8_t charToInt;
+		
+			for (uint8_t i = 0; i <= bufferPos; i++) {
+				charToInt = (int) (buffer[i] - '0');
+				intValue += charToInt * ((int)(pow(10, bufferPos - i) + 0.5));	//The 0.5 is necessary to properly convert the return value of pow() into an integer
+			}
+			bufferPos = -1;														//Reset buffer position
+		}
+		if (command) {															//Only if a command is set is data transmitted
+			testTransmitUSART(command, intValue); /*test*/
+		
+			command = 0;														//Reset command
+		}
+	}
 }
 
 int main(void)
-{
-    void writeChar(char x);
-	
-	DDRB |= (1 << BUILTIN_LED);
-	
+{	
 	//USART initialization
 	UCSR0A = 0x00;								
 	UCSR0B |= (1 << RXCIE0 | 1 << RXEN0);		//Enable USART receiver, receiver interrupt
-	UCSR0C |= (1 << UCSZ01 | 1 << UCSZ00);		//Asynchrounous USART, Parity none, 1 Stop bit, 8-bit character size
+	UCSR0B |= 1 << TXEN0;	/*Transmitter enabled for testing*/
+	UCSR0C |= (1 << UCSZ01 | 1 << UCSZ00);		//Asynchronous USART, Parity none, 1 Stop bit, 8-bit character size
 	UBRR0H = 00;
 	UBRR0L = 103;								//Baudrate 9600
 	
@@ -37,19 +77,5 @@ int main(void)
 	
     while (1) 
     {
-		writeChar('B');
-		_delay_ms(DELAY_TIME);
-		
-		if (letter == 'H') {
-			PORTB |= (1 << BUILTIN_LED);		//Turn on BUILTIN_LED
-			
-		} else if (letter == 'L') {
-			PORTB &= ~(1 << BUILTIN_LED);		//Turn off BUILTIN_LED
-		}
     }
-}
-
-void writeChar(char x) { //Sends char x over serial communication
-	while(~UCSR0A & (1 << UDRE0)); //Wait until UDRE0 is set
-	UDR0 = x;
 }

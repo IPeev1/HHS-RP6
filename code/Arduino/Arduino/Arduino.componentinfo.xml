@@ -10,12 +10,12 @@
 			<CVariant></CVariant>
 			<CVendor>Atmel</CVendor>
 			<CVersion>1.2.0</CVersion>
-			<DefaultRepoPath>C:/Program Files (x86)\Atmel\Studio\7.0\Packs</DefaultRepoPath>
+			<DefaultRepoPath>D:/Atmel Studio\7.0\Packs</DefaultRepoPath>
 			<DependentComponents xmlns:d4p1="http://schemas.microsoft.com/2003/10/Serialization/Arrays" />
 			<Description></Description>
 			<Files xmlns:d4p1="http://schemas.microsoft.com/2003/10/Serialization/Arrays">
 				<d4p1:anyType i:type="FileInfo">
-					<AbsolutePath>C:/Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.2.150\include</AbsolutePath>
+					<AbsolutePath>D:/Atmel Studio\7.0\Packs\atmel\ATmega_DFP\1.2.150\include</AbsolutePath>
 					<Attribute></Attribute>
 					<Category>include</Category>
 					<Condition>C</Condition>
@@ -26,29 +26,29 @@
 					<SourcePath></SourcePath>
 				</d4p1:anyType>
 				<d4p1:anyType i:type="FileInfo">
-					<AbsolutePath>C:/Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.2.150\include\avr\iom1280.h</AbsolutePath>
+					<AbsolutePath>D:/Atmel Studio\7.0\Packs\atmel\ATmega_DFP\1.2.150\include\avr\iom168pb.h</AbsolutePath>
 					<Attribute></Attribute>
 					<Category>header</Category>
 					<Condition>C</Condition>
-					<FileContentHash>LUvJxU0e3F1b3mCijBBoPA==</FileContentHash>
+					<FileContentHash>RQeMPo0FmYHbnGhGei+xjg==</FileContentHash>
 					<FileVersion></FileVersion>
-					<Name>include/avr/iom1280.h</Name>
+					<Name>include/avr/iom168pb.h</Name>
 					<SelectString></SelectString>
 					<SourcePath></SourcePath>
 				</d4p1:anyType>
 				<d4p1:anyType i:type="FileInfo">
-					<AbsolutePath>C:/Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.2.150\templates\main.c</AbsolutePath>
+					<AbsolutePath>D:/Atmel Studio\7.0\Packs\atmel\ATmega_DFP\1.2.150\templates\main.c</AbsolutePath>
 					<Attribute>template</Attribute>
 					<Category>source</Category>
 					<Condition>C Exe</Condition>
-					<FileContentHash>eJoTaVDKAkwmgfN2b97q7A==</FileContentHash>
+					<FileContentHash>GD1k8YYhulqRs6FD1B2Hog==</FileContentHash>
 					<FileVersion></FileVersion>
 					<Name>templates/main.c</Name>
 					<SelectString>Main file (.c)</SelectString>
 					<SourcePath></SourcePath>
 				</d4p1:anyType>
 				<d4p1:anyType i:type="FileInfo">
-					<AbsolutePath>C:/Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.2.150\templates\main.cpp</AbsolutePath>
+					<AbsolutePath>D:/Atmel Studio\7.0\Packs\atmel\ATmega_DFP\1.2.150\templates\main.cpp</AbsolutePath>
 					<Attribute>template</Attribute>
 					<Category>source</Category>
 					<Condition>C Exe</Condition>
@@ -59,22 +59,22 @@
 					<SourcePath></SourcePath>
 				</d4p1:anyType>
 				<d4p1:anyType i:type="FileInfo">
-					<AbsolutePath>C:/Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.2.150\gcc\dev\atmega1280</AbsolutePath>
+					<AbsolutePath>D:/Atmel Studio\7.0\Packs\atmel\ATmega_DFP\1.2.150\gcc\dev\atmega168pb</AbsolutePath>
 					<Attribute></Attribute>
 					<Category>libraryPrefix</Category>
 					<Condition>GCC</Condition>
 					<FileContentHash i:nil="true" />
 					<FileVersion></FileVersion>
-					<Name>gcc/dev/atmega1280</Name>
+					<Name>gcc/dev/atmega168pb</Name>
 					<SelectString></SelectString>
 					<SourcePath></SourcePath>
 				</d4p1:anyType>
 			</Files>
 			<PackName>ATmega_DFP</PackName>
-			<PackPath>C:/Program Files (x86)/Atmel/Studio/7.0/Packs/atmel/ATmega_DFP/1.2.150/Atmel.ATmega_DFP.pdsc</PackPath>
+			<PackPath>D:/Atmel Studio/7.0/Packs/atmel/ATmega_DFP/1.2.150/Atmel.ATmega_DFP.pdsc</PackPath>
 			<PackVersion>1.2.150</PackVersion>
 			<PresentInProject>true</PresentInProject>
-			<ReferenceConditionId>ATmega1280</ReferenceConditionId>
+			<ReferenceConditionId>ATmega168PB</ReferenceConditionId>
 			<RteComponents xmlns:d4p1="http://schemas.microsoft.com/2003/10/Serialization/Arrays">
 				<d4p1:string></d4p1:string>
 			</RteComponents>

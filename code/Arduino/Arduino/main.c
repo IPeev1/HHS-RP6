@@ -10,13 +10,17 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <math.h>
-#include "matthijs_testFunctions.h" /*Contains funtions for transmitting over USART for testing purposes*/
+#include "matthijs_testFunctions.h" /*Contains functions for transmitting over USART for testing purposes*/
 
 //Definitions
 #define BUFFER_SIZE 255
+/*#define USART_INTERRUPT_VECTOR USART_RX_vect*/								//Edit this line in when using Atmega168PB
+#ifndef USART_INTERRUPT_VECTOR
+#define USART_INTERRUPT_VECTOR USART0_RX_vect
+#endif
 
 
-ISR(USART_RX_vect) {															//For Atmega1280 use USART0_RX_VECT, for Atmega168PB use USART_RX_VECT
+ISR(USART_INTERRUPT_VECTOR) {
 	static char buffer[BUFFER_SIZE];											//Character buffer to store numerals
 	static int bufferPos = -1;													//Represents which buffer positions are currently in use to store numerals
 	static char received = 0;													//Stores the last character received through USART

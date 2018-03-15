@@ -37,7 +37,8 @@ SUBDIRS :=
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS +=  \
-../main.c
+../main.c \
+../matthijs_testFunctions.c
 
 
 PREPROCESSING_SRCS += 
@@ -47,16 +48,20 @@ ASM_SRCS +=
 
 
 OBJS +=  \
-main.o
+main.o \
+matthijs_testFunctions.o
 
 OBJS_AS_ARGS +=  \
-main.o
+main.o \
+matthijs_testFunctions.o
 
 C_DEPS +=  \
-main.d
+main.d \
+matthijs_testFunctions.d
 
 C_DEPS_AS_ARGS +=  \
-main.d
+main.d \
+matthijs_testFunctions.d
 
 OUTPUT_FILE_PATH +=Arduino.elf
 
@@ -72,6 +77,8 @@ LINKER_SCRIPT_DEP+=
 
 
 # AVR32/GNU C Compiler
+
+
 
 
 

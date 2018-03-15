@@ -16,6 +16,7 @@
 #include <avr/interrupt.h>
 #include <math.h>
 #include <util/delay.h>
+#include "i2c.h"
 
 //Global variables
 uint8_t statLED[2] = {64, 1};

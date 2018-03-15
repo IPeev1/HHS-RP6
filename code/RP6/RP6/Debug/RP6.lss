@@ -23,11 +23,19 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING
   9 .debug_frame  000001fc  00000000  00000000  00002c3c  2**2
                   CONTENTS, READONLY, DEBUGGING
+<<<<<<< Updated upstream
  10 .debug_str    000005a7  00000000  00000000  00002e38  2**0
                   CONTENTS, READONLY, DEBUGGING
  11 .debug_loc    00000538  00000000  00000000  000033df  2**0
                   CONTENTS, READONLY, DEBUGGING
  12 .debug_ranges 00000088  00000000  00000000  00003917  2**0
+=======
+ 10 .debug_str    0000050d  00000000  00000000  00002d04  2**0
+                  CONTENTS, READONLY, DEBUGGING
+ 11 .debug_loc    00000538  00000000  00000000  00003211  2**0
+                  CONTENTS, READONLY, DEBUGGING
+ 12 .debug_ranges 00000078  00000000  00000000  00003749  2**0
+>>>>>>> Stashed changes
                   CONTENTS, READONLY, DEBUGGING
 
 Disassembly of section .text:
@@ -521,6 +529,7 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
 	
 	//Update timer
 	if(updateTimer > micros()){														//Only execute motor update code if the timer has passed
+<<<<<<< Updated upstream
      348:	0e 94 c0 00 	call	0x180	; 0x180 <micros>
      34c:	a0 90 78 00 	lds	r10, 0x0078	; 0x800078 <updateTimer.1809>
      350:	b0 90 79 00 	lds	r11, 0x0079	; 0x800079 <updateTimer.1809+0x1>
@@ -561,6 +570,48 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
      3ac:	70 93 7d 00 	sts	0x007D, r23	; 0x80007d <updateTimer.1809+0x5>
      3b0:	80 93 7e 00 	sts	0x007E, r24	; 0x80007e <updateTimer.1809+0x6>
      3b4:	90 93 7f 00 	sts	0x007F, r25	; 0x80007f <updateTimer.1809+0x7>
+=======
+     31c:	0e 94 aa 00 	call	0x154	; 0x154 <micros>
+     320:	a0 90 78 00 	lds	r10, 0x0078	; 0x800078 <updateTimer.1974>
+     324:	b0 90 79 00 	lds	r11, 0x0079	; 0x800079 <updateTimer.1974+0x1>
+     328:	c0 90 7a 00 	lds	r12, 0x007A	; 0x80007a <updateTimer.1974+0x2>
+     32c:	d0 90 7b 00 	lds	r13, 0x007B	; 0x80007b <updateTimer.1974+0x3>
+     330:	e0 90 7c 00 	lds	r14, 0x007C	; 0x80007c <updateTimer.1974+0x4>
+     334:	f0 90 7d 00 	lds	r15, 0x007D	; 0x80007d <updateTimer.1974+0x5>
+     338:	00 91 7e 00 	lds	r16, 0x007E	; 0x80007e <updateTimer.1974+0x6>
+     33c:	10 91 7f 00 	lds	r17, 0x007F	; 0x80007f <updateTimer.1974+0x7>
+     340:	0e 94 04 0a 	call	0x1408	; 0x1408 <__cmpdi2>
+     344:	08 f4       	brcc	.+2      	; 0x348 <motorDriver+0x76>
+     346:	ee c3       	rjmp	.+2012   	; 0xb24 <__stack+0x2c5>
+		return 0;
+	}else{
+		updateTimer = micros() + updateSpeed;											//If the timer has passed, set new timer and execute the code
+     348:	0e 94 aa 00 	call	0x154	; 0x154 <micros>
+     34c:	29 87       	std	Y+9, r18	; 0x09
+     34e:	3a 87       	std	Y+10, r19	; 0x0a
+     350:	4b 87       	std	Y+11, r20	; 0x0b
+     352:	5c 87       	std	Y+12, r21	; 0x0c
+     354:	6d 87       	std	Y+13, r22	; 0x0d
+     356:	7e 87       	std	Y+14, r23	; 0x0e
+     358:	8f 87       	std	Y+15, r24	; 0x0f
+     35a:	98 8b       	std	Y+16, r25	; 0x10
+     35c:	20 5c       	subi	r18, 0xC0	; 192
+     35e:	32 4f       	sbci	r19, 0xF2	; 242
+     360:	4c 4f       	sbci	r20, 0xFC	; 252
+     362:	5f 4f       	sbci	r21, 0xFF	; 255
+     364:	6f 4f       	sbci	r22, 0xFF	; 255
+     366:	7f 4f       	sbci	r23, 0xFF	; 255
+     368:	8f 4f       	sbci	r24, 0xFF	; 255
+     36a:	9f 4f       	sbci	r25, 0xFF	; 255
+     36c:	20 93 78 00 	sts	0x0078, r18	; 0x800078 <updateTimer.1974>
+     370:	30 93 79 00 	sts	0x0079, r19	; 0x800079 <updateTimer.1974+0x1>
+     374:	40 93 7a 00 	sts	0x007A, r20	; 0x80007a <updateTimer.1974+0x2>
+     378:	50 93 7b 00 	sts	0x007B, r21	; 0x80007b <updateTimer.1974+0x3>
+     37c:	60 93 7c 00 	sts	0x007C, r22	; 0x80007c <updateTimer.1974+0x4>
+     380:	70 93 7d 00 	sts	0x007D, r23	; 0x80007d <updateTimer.1974+0x5>
+     384:	80 93 7e 00 	sts	0x007E, r24	; 0x80007e <updateTimer.1974+0x6>
+     388:	90 93 7f 00 	sts	0x007F, r25	; 0x80007f <updateTimer.1974+0x7>
+>>>>>>> Stashed changes
 	}
 	
 	
@@ -623,6 +674,7 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
 	
 	//Check and change drive direction
 	if(driveDirection != currentDriveDirection && currentDriveSpeed != 0){			//If the drive direction differs from what we are currently driving and we are not standing still
+<<<<<<< Updated upstream
      424:	80 91 64 00 	lds	r24, 0x0064	; 0x800064 <currentDriveDirection.1810>
      428:	90 91 65 00 	lds	r25, 0x0065	; 0x800065 <currentDriveDirection.1810+0x1>
      42c:	2d 89       	ldd	r18, Y+21	; 0x15
@@ -648,6 +700,33 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
      460:	9e 89       	ldd	r25, Y+22	; 0x16
      462:	90 93 65 00 	sts	0x0065, r25	; 0x800065 <currentDriveDirection.1810+0x1>
      466:	80 93 64 00 	sts	0x0064, r24	; 0x800064 <currentDriveDirection.1810>
+=======
+     3f8:	80 91 64 00 	lds	r24, 0x0064	; 0x800064 <currentDriveDirection.1977>
+     3fc:	90 91 65 00 	lds	r25, 0x0065	; 0x800065 <currentDriveDirection.1977+0x1>
+     400:	2d 89       	ldd	r18, Y+21	; 0x15
+     402:	3e 89       	ldd	r19, Y+22	; 0x16
+     404:	82 17       	cp	r24, r18
+     406:	93 07       	cpc	r25, r19
+     408:	59 f1       	breq	.+86     	; 0x460 <__LOCK_REGION_LENGTH__+0x60>
+     40a:	20 91 70 00 	lds	r18, 0x0070	; 0x800070 <currentDriveSpeed.1976>
+     40e:	30 91 71 00 	lds	r19, 0x0071	; 0x800071 <currentDriveSpeed.1976+0x1>
+     412:	40 91 72 00 	lds	r20, 0x0072	; 0x800072 <currentDriveSpeed.1976+0x2>
+     416:	50 91 73 00 	lds	r21, 0x0073	; 0x800073 <currentDriveSpeed.1976+0x3>
+     41a:	60 91 74 00 	lds	r22, 0x0074	; 0x800074 <currentDriveSpeed.1976+0x4>
+     41e:	70 91 75 00 	lds	r23, 0x0075	; 0x800075 <currentDriveSpeed.1976+0x5>
+     422:	80 91 76 00 	lds	r24, 0x0076	; 0x800076 <currentDriveSpeed.1976+0x6>
+     426:	90 91 77 00 	lds	r25, 0x0077	; 0x800077 <currentDriveSpeed.1976+0x7>
+     42a:	a0 e0       	ldi	r26, 0x00	; 0
+     42c:	0e 94 0d 0a 	call	0x141a	; 0x141a <__cmpdi2_s8>
+     430:	79 f4       	brne	.+30     	; 0x450 <__LOCK_REGION_LENGTH__+0x50>
+		driveSpeed = 0;																	//Set the requested speed to 0
+	}else if(driveDirection != currentDriveDirection && currentDriveSpeed == 0){	//If the direction is wrong but we are standing still
+		currentDriveDirection = driveDirection;											//Reverse the driving direction
+     432:	8d 89       	ldd	r24, Y+21	; 0x15
+     434:	9e 89       	ldd	r25, Y+22	; 0x16
+     436:	90 93 65 00 	sts	0x0065, r25	; 0x800065 <currentDriveDirection.1977+0x1>
+     43a:	80 93 64 00 	sts	0x0064, r24	; 0x800064 <currentDriveDirection.1977>
+>>>>>>> Stashed changes
 		driveSpeed = 0;																	//And remain stationary for this update cycle
      46a:	19 82       	std	Y+1, r1	; 0x01
      46c:	1a 82       	std	Y+2, r1	; 0x02
@@ -678,6 +757,7 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
 	
 	//Smoothly adjust current drive speed to requested drive speed
 	speedDifference = sqrt(pow((driveSpeed - currentDriveSpeed), 2));				//Calculate the speed difference (always positive)
+<<<<<<< Updated upstream
      48c:	90 91 70 00 	lds	r25, 0x0070	; 0x800070 <currentDriveSpeed.1813>
      490:	9b 83       	std	Y+3, r25	; 0x03
      492:	a0 91 71 00 	lds	r26, 0x0071	; 0x800071 <currentDriveSpeed.1813+0x1>
@@ -728,6 +808,58 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
      4fe:	b6 01       	movw	r22, r12
      500:	0e 94 d0 07 	call	0xfa0	; 0xfa0 <__mulsf3>
      504:	0e 94 43 08 	call	0x1086	; 0x1086 <sqrt>
+=======
+     460:	90 91 70 00 	lds	r25, 0x0070	; 0x800070 <currentDriveSpeed.1976>
+     464:	9b 83       	std	Y+3, r25	; 0x03
+     466:	a0 91 71 00 	lds	r26, 0x0071	; 0x800071 <currentDriveSpeed.1976+0x1>
+     46a:	ac 83       	std	Y+4, r26	; 0x04
+     46c:	e0 91 72 00 	lds	r30, 0x0072	; 0x800072 <currentDriveSpeed.1976+0x2>
+     470:	ed 83       	std	Y+5, r30	; 0x05
+     472:	00 91 73 00 	lds	r16, 0x0073	; 0x800073 <currentDriveSpeed.1976+0x3>
+     476:	0e 83       	std	Y+6, r16	; 0x06
+     478:	10 91 74 00 	lds	r17, 0x0074	; 0x800074 <currentDriveSpeed.1976+0x4>
+     47c:	1f 83       	std	Y+7, r17	; 0x07
+     47e:	20 91 75 00 	lds	r18, 0x0075	; 0x800075 <currentDriveSpeed.1976+0x5>
+     482:	28 87       	std	Y+8, r18	; 0x08
+     484:	30 91 76 00 	lds	r19, 0x0076	; 0x800076 <currentDriveSpeed.1976+0x6>
+     488:	3f 8b       	std	Y+23, r19	; 0x17
+     48a:	80 91 77 00 	lds	r24, 0x0077	; 0x800077 <currentDriveSpeed.1976+0x7>
+     48e:	8d 8b       	std	Y+21, r24	; 0x15
+     490:	29 81       	ldd	r18, Y+1	; 0x01
+     492:	3a 81       	ldd	r19, Y+2	; 0x02
+     494:	42 2d       	mov	r20, r2
+     496:	53 2d       	mov	r21, r3
+     498:	64 2d       	mov	r22, r4
+     49a:	75 2d       	mov	r23, r5
+     49c:	86 2d       	mov	r24, r6
+     49e:	97 2d       	mov	r25, r7
+     4a0:	ab 80       	ldd	r10, Y+3	; 0x03
+     4a2:	ba 2e       	mov	r11, r26
+     4a4:	ce 2e       	mov	r12, r30
+     4a6:	d0 2e       	mov	r13, r16
+     4a8:	e1 2e       	mov	r14, r17
+     4aa:	f8 84       	ldd	r15, Y+8	; 0x08
+     4ac:	0f 89       	ldd	r16, Y+23	; 0x17
+     4ae:	1d 89       	ldd	r17, Y+21	; 0x15
+     4b0:	0e 94 fb 09 	call	0x13f6	; 0x13f6 <__subdi3>
+     4b4:	29 8b       	std	Y+17, r18	; 0x11
+     4b6:	3a 8b       	std	Y+18, r19	; 0x12
+     4b8:	a4 2e       	mov	r10, r20
+     4ba:	b5 2e       	mov	r11, r21
+     4bc:	06 2f       	mov	r16, r22
+     4be:	17 2f       	mov	r17, r23
+     4c0:	8b 8b       	std	Y+19, r24	; 0x13
+     4c2:	9c 8b       	std	Y+20, r25	; 0x14
+     4c4:	0e 94 d1 06 	call	0xda2	; 0xda2 <__floatdisf>
+     4c8:	6b 01       	movw	r12, r22
+     4ca:	7c 01       	movw	r14, r24
+     4cc:	a7 01       	movw	r20, r14
+     4ce:	96 01       	movw	r18, r12
+     4d0:	c7 01       	movw	r24, r14
+     4d2:	b6 01       	movw	r22, r12
+     4d4:	0e 94 b3 07 	call	0xf66	; 0xf66 <__mulsf3>
+     4d8:	0e 94 26 08 	call	0x104c	; 0x104c <sqrt>
+>>>>>>> Stashed changes
 	
 	if(speedDifference < 2000){														//If the difference is less than 2000
      508:	0e 94 bf 06 	call	0xd7e	; 0xd7e <__fixunssfsi>
@@ -737,6 +869,7 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
      512:	91 05       	cpc	r25, r1
      514:	98 f4       	brcc	.+38     	; 0x53c <__LOCK_REGION_LENGTH__+0x13c>
 		currentDriveSpeed = driveSpeed;													//Set the current speed to the requested value
+<<<<<<< Updated upstream
      516:	e9 81       	ldd	r30, Y+1	; 0x01
      518:	e0 93 70 00 	sts	0x0070, r30	; 0x800070 <currentDriveSpeed.1813>
      51c:	0a 81       	ldd	r16, Y+2	; 0x02
@@ -748,6 +881,19 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
      532:	60 92 76 00 	sts	0x0076, r6	; 0x800076 <currentDriveSpeed.1813+0x6>
      536:	70 92 77 00 	sts	0x0077, r7	; 0x800077 <currentDriveSpeed.1813+0x7>
      53a:	15 c1       	rjmp	.+554    	; 0x766 <__LOCK_REGION_LENGTH__+0x366>
+=======
+     4ea:	e9 81       	ldd	r30, Y+1	; 0x01
+     4ec:	e0 93 70 00 	sts	0x0070, r30	; 0x800070 <currentDriveSpeed.1976>
+     4f0:	0a 81       	ldd	r16, Y+2	; 0x02
+     4f2:	00 93 71 00 	sts	0x0071, r16	; 0x800071 <currentDriveSpeed.1976+0x1>
+     4f6:	20 92 72 00 	sts	0x0072, r2	; 0x800072 <currentDriveSpeed.1976+0x2>
+     4fa:	30 92 73 00 	sts	0x0073, r3	; 0x800073 <currentDriveSpeed.1976+0x3>
+     4fe:	40 92 74 00 	sts	0x0074, r4	; 0x800074 <currentDriveSpeed.1976+0x4>
+     502:	50 92 75 00 	sts	0x0075, r5	; 0x800075 <currentDriveSpeed.1976+0x5>
+     506:	60 92 76 00 	sts	0x0076, r6	; 0x800076 <currentDriveSpeed.1976+0x6>
+     50a:	70 92 77 00 	sts	0x0077, r7	; 0x800077 <currentDriveSpeed.1976+0x7>
+     50e:	15 c1       	rjmp	.+554    	; 0x73a <__LOCK_REGION_LENGTH__+0x33a>
+>>>>>>> Stashed changes
 	}else{																			//If the difference is more than 2000
 		if(driveSpeed - currentDriveSpeed < 0){											//Check if we need to accelerate or decelerate, if we need to decelerate
      53c:	29 89       	ldd	r18, Y+17	; 0x11
@@ -782,6 +928,7 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
      576:	09 f0       	breq	.+2      	; 0x57a <__LOCK_REGION_LENGTH__+0x17a>
      578:	9c f4       	brge	.+38     	; 0x5a0 <__LOCK_REGION_LENGTH__+0x1a0>
 				currentDriveSpeed = driveSpeed;													//Set the speed to the requested value (Probably 0)
+<<<<<<< Updated upstream
      57a:	29 81       	ldd	r18, Y+1	; 0x01
      57c:	20 93 70 00 	sts	0x0070, r18	; 0x800070 <currentDriveSpeed.1813>
      580:	3a 81       	ldd	r19, Y+2	; 0x02
@@ -855,6 +1002,81 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
      628:	80 93 76 00 	sts	0x0076, r24	; 0x800076 <currentDriveSpeed.1813+0x6>
      62c:	90 93 77 00 	sts	0x0077, r25	; 0x800077 <currentDriveSpeed.1813+0x7>
      630:	9a c0       	rjmp	.+308    	; 0x766 <__LOCK_REGION_LENGTH__+0x366>
+=======
+     54e:	29 81       	ldd	r18, Y+1	; 0x01
+     550:	20 93 70 00 	sts	0x0070, r18	; 0x800070 <currentDriveSpeed.1976>
+     554:	3a 81       	ldd	r19, Y+2	; 0x02
+     556:	30 93 71 00 	sts	0x0071, r19	; 0x800071 <currentDriveSpeed.1976+0x1>
+     55a:	20 92 72 00 	sts	0x0072, r2	; 0x800072 <currentDriveSpeed.1976+0x2>
+     55e:	30 92 73 00 	sts	0x0073, r3	; 0x800073 <currentDriveSpeed.1976+0x3>
+     562:	40 92 74 00 	sts	0x0074, r4	; 0x800074 <currentDriveSpeed.1976+0x4>
+     566:	50 92 75 00 	sts	0x0075, r5	; 0x800075 <currentDriveSpeed.1976+0x5>
+     56a:	60 92 76 00 	sts	0x0076, r6	; 0x800076 <currentDriveSpeed.1976+0x6>
+     56e:	70 92 77 00 	sts	0x0077, r7	; 0x800077 <currentDriveSpeed.1976+0x7>
+     572:	e3 c0       	rjmp	.+454    	; 0x73a <__LOCK_REGION_LENGTH__+0x33a>
+			}else{																			//If the current speed is higher than 5000
+				currentDriveSpeed -= ((currentDriveSpeed * accelerationRate)/100);				//Decelerate with a given percentage of the current speed, determined by accelerationRate
+     574:	2b 81       	ldd	r18, Y+3	; 0x03
+     576:	3c 81       	ldd	r19, Y+4	; 0x04
+     578:	4d 81       	ldd	r20, Y+5	; 0x05
+     57a:	5e 81       	ldd	r21, Y+6	; 0x06
+     57c:	6f 81       	ldd	r22, Y+7	; 0x07
+     57e:	78 85       	ldd	r23, Y+8	; 0x08
+     580:	8f 89       	ldd	r24, Y+23	; 0x17
+     582:	9d 89       	ldd	r25, Y+21	; 0x15
+     584:	01 e0       	ldi	r16, 0x01	; 1
+     586:	0e 94 cd 09 	call	0x139a	; 0x139a <__ashldi3>
+     58a:	a2 2e       	mov	r10, r18
+     58c:	b3 2e       	mov	r11, r19
+     58e:	c4 2e       	mov	r12, r20
+     590:	d5 2e       	mov	r13, r21
+     592:	e6 2e       	mov	r14, r22
+     594:	f7 2e       	mov	r15, r23
+     596:	e8 2f       	mov	r30, r24
+     598:	19 2f       	mov	r17, r25
+     59a:	04 e0       	ldi	r16, 0x04	; 4
+     59c:	0e 94 cd 09 	call	0x139a	; 0x139a <__ashldi3>
+     5a0:	0e 2f       	mov	r16, r30
+     5a2:	0e 94 fb 09 	call	0x13f6	; 0x13f6 <__subdi3>
+     5a6:	0f 2e       	mov	r0, r31
+     5a8:	f4 e6       	ldi	r31, 0x64	; 100
+     5aa:	af 2e       	mov	r10, r31
+     5ac:	f0 2d       	mov	r31, r0
+     5ae:	b1 2c       	mov	r11, r1
+     5b0:	c1 2c       	mov	r12, r1
+     5b2:	d1 2c       	mov	r13, r1
+     5b4:	e1 2c       	mov	r14, r1
+     5b6:	f1 2c       	mov	r15, r1
+     5b8:	00 e0       	ldi	r16, 0x00	; 0
+     5ba:	10 e0       	ldi	r17, 0x00	; 0
+     5bc:	0e 94 f8 08 	call	0x11f0	; 0x11f0 <__divdi3>
+     5c0:	a2 2e       	mov	r10, r18
+     5c2:	b3 2e       	mov	r11, r19
+     5c4:	c4 2e       	mov	r12, r20
+     5c6:	d5 2e       	mov	r13, r21
+     5c8:	e6 2e       	mov	r14, r22
+     5ca:	f7 2e       	mov	r15, r23
+     5cc:	08 2f       	mov	r16, r24
+     5ce:	19 2f       	mov	r17, r25
+     5d0:	2b 81       	ldd	r18, Y+3	; 0x03
+     5d2:	3c 81       	ldd	r19, Y+4	; 0x04
+     5d4:	4d 81       	ldd	r20, Y+5	; 0x05
+     5d6:	5e 81       	ldd	r21, Y+6	; 0x06
+     5d8:	6f 81       	ldd	r22, Y+7	; 0x07
+     5da:	78 85       	ldd	r23, Y+8	; 0x08
+     5dc:	8f 89       	ldd	r24, Y+23	; 0x17
+     5de:	9d 89       	ldd	r25, Y+21	; 0x15
+     5e0:	0e 94 fb 09 	call	0x13f6	; 0x13f6 <__subdi3>
+     5e4:	20 93 70 00 	sts	0x0070, r18	; 0x800070 <currentDriveSpeed.1976>
+     5e8:	30 93 71 00 	sts	0x0071, r19	; 0x800071 <currentDriveSpeed.1976+0x1>
+     5ec:	40 93 72 00 	sts	0x0072, r20	; 0x800072 <currentDriveSpeed.1976+0x2>
+     5f0:	50 93 73 00 	sts	0x0073, r21	; 0x800073 <currentDriveSpeed.1976+0x3>
+     5f4:	60 93 74 00 	sts	0x0074, r22	; 0x800074 <currentDriveSpeed.1976+0x4>
+     5f8:	70 93 75 00 	sts	0x0075, r23	; 0x800075 <currentDriveSpeed.1976+0x5>
+     5fc:	80 93 76 00 	sts	0x0076, r24	; 0x800076 <currentDriveSpeed.1976+0x6>
+     600:	90 93 77 00 	sts	0x0077, r25	; 0x800077 <currentDriveSpeed.1976+0x7>
+     604:	9a c0       	rjmp	.+308    	; 0x73a <__LOCK_REGION_LENGTH__+0x33a>
+>>>>>>> Stashed changes
 			}
 		}else{																			//If we need to accelerate
 			if(currentDriveSpeed < driveSpeedThreshold){									//And we are still at a speed lower than the threshold
@@ -878,6 +1100,7 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
      654:	09 f0       	breq	.+2      	; 0x658 <__LOCK_REGION_LENGTH__+0x258>
      656:	cc f4       	brge	.+50     	; 0x68a <__LOCK_REGION_LENGTH__+0x28a>
 				currentDriveSpeed += driveSpeedThreshold;										//Speed up with the minimum threshold
+<<<<<<< Updated upstream
      658:	28 57       	subi	r18, 0x78	; 120
      65a:	3c 4e       	sbci	r19, 0xEC	; 236
      65c:	4f 4f       	sbci	r20, 0xFF	; 255
@@ -895,6 +1118,25 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
      680:	80 93 76 00 	sts	0x0076, r24	; 0x800076 <currentDriveSpeed.1813+0x6>
      684:	90 93 77 00 	sts	0x0077, r25	; 0x800077 <currentDriveSpeed.1813+0x7>
      688:	6e c0       	rjmp	.+220    	; 0x766 <__LOCK_REGION_LENGTH__+0x366>
+=======
+     62c:	28 57       	subi	r18, 0x78	; 120
+     62e:	3c 4e       	sbci	r19, 0xEC	; 236
+     630:	4f 4f       	sbci	r20, 0xFF	; 255
+     632:	5f 4f       	sbci	r21, 0xFF	; 255
+     634:	6f 4f       	sbci	r22, 0xFF	; 255
+     636:	7f 4f       	sbci	r23, 0xFF	; 255
+     638:	8f 4f       	sbci	r24, 0xFF	; 255
+     63a:	9f 4f       	sbci	r25, 0xFF	; 255
+     63c:	20 93 70 00 	sts	0x0070, r18	; 0x800070 <currentDriveSpeed.1976>
+     640:	30 93 71 00 	sts	0x0071, r19	; 0x800071 <currentDriveSpeed.1976+0x1>
+     644:	40 93 72 00 	sts	0x0072, r20	; 0x800072 <currentDriveSpeed.1976+0x2>
+     648:	50 93 73 00 	sts	0x0073, r21	; 0x800073 <currentDriveSpeed.1976+0x3>
+     64c:	60 93 74 00 	sts	0x0074, r22	; 0x800074 <currentDriveSpeed.1976+0x4>
+     650:	70 93 75 00 	sts	0x0075, r23	; 0x800075 <currentDriveSpeed.1976+0x5>
+     654:	80 93 76 00 	sts	0x0076, r24	; 0x800076 <currentDriveSpeed.1976+0x6>
+     658:	90 93 77 00 	sts	0x0077, r25	; 0x800077 <currentDriveSpeed.1976+0x7>
+     65c:	6e c0       	rjmp	.+220    	; 0x73a <__LOCK_REGION_LENGTH__+0x33a>
+>>>>>>> Stashed changes
 			}else{																			//If we are at a speed higher than the threshold
 				currentDriveSpeed += ((currentDriveSpeed * accelerationRate)/100);				//Accelerate with a percentage of the current speed, determined by accelerationRate
      68a:	2b 81       	ldd	r18, Y+3	; 0x03
@@ -973,6 +1215,7 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
 				currentDriveSpeed += driveSpeedThreshold;										//Speed up with the minimum threshold
 			}else{																			//If we are at a speed higher than the threshold
 				currentDriveSpeed += ((currentDriveSpeed * accelerationRate)/100);				//Accelerate with a percentage of the current speed, determined by accelerationRate
+<<<<<<< Updated upstream
      720:	a0 92 70 00 	sts	0x0070, r10	; 0x800070 <currentDriveSpeed.1813>
      724:	b0 92 71 00 	sts	0x0071, r11	; 0x800071 <currentDriveSpeed.1813+0x1>
      728:	c0 92 72 00 	sts	0x0072, r12	; 0x800072 <currentDriveSpeed.1813+0x2>
@@ -993,20 +1236,50 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
      75a:	50 92 75 00 	sts	0x0075, r5	; 0x800075 <currentDriveSpeed.1813+0x5>
      75e:	60 92 76 00 	sts	0x0076, r6	; 0x800076 <currentDriveSpeed.1813+0x6>
      762:	70 92 77 00 	sts	0x0077, r7	; 0x800077 <currentDriveSpeed.1813+0x7>
+=======
+     6f4:	a0 92 70 00 	sts	0x0070, r10	; 0x800070 <currentDriveSpeed.1976>
+     6f8:	b0 92 71 00 	sts	0x0071, r11	; 0x800071 <currentDriveSpeed.1976+0x1>
+     6fc:	c0 92 72 00 	sts	0x0072, r12	; 0x800072 <currentDriveSpeed.1976+0x2>
+     700:	d0 92 73 00 	sts	0x0073, r13	; 0x800073 <currentDriveSpeed.1976+0x3>
+     704:	b0 93 74 00 	sts	0x0074, r27	; 0x800074 <currentDriveSpeed.1976+0x4>
+     708:	a0 93 75 00 	sts	0x0075, r26	; 0x800075 <currentDriveSpeed.1976+0x5>
+     70c:	f0 93 76 00 	sts	0x0076, r31	; 0x800076 <currentDriveSpeed.1976+0x6>
+     710:	e0 93 77 00 	sts	0x0077, r30	; 0x800077 <currentDriveSpeed.1976+0x7>
+     714:	12 c0       	rjmp	.+36     	; 0x73a <__LOCK_REGION_LENGTH__+0x33a>
+				if(currentDriveSpeed > driveSpeed){currentDriveSpeed = driveSpeed;}				//If we overshot the requested speed, set the current speed to the requested value (Can't be much of a difference)
+     716:	39 81       	ldd	r19, Y+1	; 0x01
+     718:	30 93 70 00 	sts	0x0070, r19	; 0x800070 <currentDriveSpeed.1976>
+     71c:	8a 81       	ldd	r24, Y+2	; 0x02
+     71e:	80 93 71 00 	sts	0x0071, r24	; 0x800071 <currentDriveSpeed.1976+0x1>
+     722:	20 92 72 00 	sts	0x0072, r2	; 0x800072 <currentDriveSpeed.1976+0x2>
+     726:	30 92 73 00 	sts	0x0073, r3	; 0x800073 <currentDriveSpeed.1976+0x3>
+     72a:	40 92 74 00 	sts	0x0074, r4	; 0x800074 <currentDriveSpeed.1976+0x4>
+     72e:	50 92 75 00 	sts	0x0075, r5	; 0x800075 <currentDriveSpeed.1976+0x5>
+     732:	60 92 76 00 	sts	0x0076, r6	; 0x800076 <currentDriveSpeed.1976+0x6>
+     736:	70 92 77 00 	sts	0x0077, r7	; 0x800077 <currentDriveSpeed.1976+0x7>
+>>>>>>> Stashed changes
 		}
 	}
 	
 	
 	//Split motor drive direction and speed
 	leftMotorDirection = currentDriveDirection;
+<<<<<<< Updated upstream
      766:	80 91 64 00 	lds	r24, 0x0064	; 0x800064 <currentDriveDirection.1810>
      76a:	90 91 65 00 	lds	r25, 0x0065	; 0x800065 <currentDriveDirection.1810+0x1>
      76e:	90 93 63 00 	sts	0x0063, r25	; 0x800063 <leftMotorDirection.1814+0x1>
      772:	80 93 62 00 	sts	0x0062, r24	; 0x800062 <leftMotorDirection.1814>
+=======
+     73a:	80 91 64 00 	lds	r24, 0x0064	; 0x800064 <currentDriveDirection.1977>
+     73e:	90 91 65 00 	lds	r25, 0x0065	; 0x800065 <currentDriveDirection.1977+0x1>
+     742:	90 93 63 00 	sts	0x0063, r25	; 0x800063 <leftMotorDirection.1980+0x1>
+     746:	80 93 62 00 	sts	0x0062, r24	; 0x800062 <leftMotorDirection.1980>
+>>>>>>> Stashed changes
 	rightMotorDirection = currentDriveDirection;
      776:	90 93 61 00 	sts	0x0061, r25	; 0x800061 <__data_start+0x1>
      77a:	80 93 60 00 	sts	0x0060, r24	; 0x800060 <__data_start>
 	leftMotorSpeed = currentDriveSpeed;
+<<<<<<< Updated upstream
      77e:	20 91 70 00 	lds	r18, 0x0070	; 0x800070 <currentDriveSpeed.1813>
      782:	30 91 71 00 	lds	r19, 0x0071	; 0x800071 <currentDriveSpeed.1813+0x1>
      786:	40 91 72 00 	lds	r20, 0x0072	; 0x800072 <currentDriveSpeed.1813+0x2>
@@ -1028,6 +1301,29 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
      7ba:	30 93 69 00 	sts	0x0069, r19	; 0x800069 <rightMotorSpeed.1817+0x1>
      7be:	40 93 6a 00 	sts	0x006A, r20	; 0x80006a <rightMotorSpeed.1817+0x2>
      7c2:	50 93 6b 00 	sts	0x006B, r21	; 0x80006b <rightMotorSpeed.1817+0x3>
+=======
+     752:	20 91 70 00 	lds	r18, 0x0070	; 0x800070 <currentDriveSpeed.1976>
+     756:	30 91 71 00 	lds	r19, 0x0071	; 0x800071 <currentDriveSpeed.1976+0x1>
+     75a:	40 91 72 00 	lds	r20, 0x0072	; 0x800072 <currentDriveSpeed.1976+0x2>
+     75e:	50 91 73 00 	lds	r21, 0x0073	; 0x800073 <currentDriveSpeed.1976+0x3>
+     762:	60 91 74 00 	lds	r22, 0x0074	; 0x800074 <currentDriveSpeed.1976+0x4>
+     766:	70 91 75 00 	lds	r23, 0x0075	; 0x800075 <currentDriveSpeed.1976+0x5>
+     76a:	80 91 76 00 	lds	r24, 0x0076	; 0x800076 <currentDriveSpeed.1976+0x6>
+     76e:	90 91 77 00 	lds	r25, 0x0077	; 0x800077 <currentDriveSpeed.1976+0x7>
+     772:	c2 2e       	mov	r12, r18
+     774:	d3 2e       	mov	r13, r19
+     776:	e4 2e       	mov	r14, r20
+     778:	f5 2e       	mov	r15, r21
+     77a:	20 93 6c 00 	sts	0x006C, r18	; 0x80006c <leftMotorSpeed.1982>
+     77e:	30 93 6d 00 	sts	0x006D, r19	; 0x80006d <leftMotorSpeed.1982+0x1>
+     782:	40 93 6e 00 	sts	0x006E, r20	; 0x80006e <leftMotorSpeed.1982+0x2>
+     786:	50 93 6f 00 	sts	0x006F, r21	; 0x80006f <leftMotorSpeed.1982+0x3>
+	rightMotorSpeed = currentDriveSpeed;
+     78a:	20 93 68 00 	sts	0x0068, r18	; 0x800068 <rightMotorSpeed.1983>
+     78e:	30 93 69 00 	sts	0x0069, r19	; 0x800069 <rightMotorSpeed.1983+0x1>
+     792:	40 93 6a 00 	sts	0x006A, r20	; 0x80006a <rightMotorSpeed.1983+0x2>
+     796:	50 93 6b 00 	sts	0x006B, r21	; 0x80006b <rightMotorSpeed.1983+0x3>
+>>>>>>> Stashed changes
 	
 	
 	//Check turn direction
@@ -1056,6 +1352,7 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
      7ec:	90 e0       	ldi	r25, 0x00	; 0
      7ee:	0e 94 6f 01 	call	0x2de	; 0x2de <enableMotorEncoder>
 		}
+<<<<<<< Updated upstream
 		updateTimer += 100000;											//Add an extra delay to decrease wear and tear on the gears
      7f2:	29 85       	ldd	r18, Y+9	; 0x09
      7f4:	3a 85       	ldd	r19, Y+10	; 0x0a
@@ -1136,6 +1433,88 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
      8ae:	e0 92 6a 00 	sts	0x006A, r14	; 0x80006a <rightMotorSpeed.1817+0x2>
      8b2:	f0 92 6b 00 	sts	0x006B, r15	; 0x80006b <rightMotorSpeed.1817+0x3>
      8b6:	86 c0       	rjmp	.+268    	; 0x9c4 <__stack+0x165>
+=======
+		updateTimer += 200000;
+     7c6:	29 85       	ldd	r18, Y+9	; 0x09
+     7c8:	3a 85       	ldd	r19, Y+10	; 0x0a
+     7ca:	4b 85       	ldd	r20, Y+11	; 0x0b
+     7cc:	5c 85       	ldd	r21, Y+12	; 0x0c
+     7ce:	6d 85       	ldd	r22, Y+13	; 0x0d
+     7d0:	7e 85       	ldd	r23, Y+14	; 0x0e
+     7d2:	8f 85       	ldd	r24, Y+15	; 0x0f
+     7d4:	98 89       	ldd	r25, Y+16	; 0x10
+     7d6:	20 58       	subi	r18, 0x80	; 128
+     7d8:	35 4e       	sbci	r19, 0xE5	; 229
+     7da:	49 4f       	sbci	r20, 0xF9	; 249
+     7dc:	5f 4f       	sbci	r21, 0xFF	; 255
+     7de:	6f 4f       	sbci	r22, 0xFF	; 255
+     7e0:	7f 4f       	sbci	r23, 0xFF	; 255
+     7e2:	8f 4f       	sbci	r24, 0xFF	; 255
+     7e4:	9f 4f       	sbci	r25, 0xFF	; 255
+     7e6:	20 93 78 00 	sts	0x0078, r18	; 0x800078 <updateTimer.1974>
+     7ea:	30 93 79 00 	sts	0x0079, r19	; 0x800079 <updateTimer.1974+0x1>
+     7ee:	40 93 7a 00 	sts	0x007A, r20	; 0x80007a <updateTimer.1974+0x2>
+     7f2:	50 93 7b 00 	sts	0x007B, r21	; 0x80007b <updateTimer.1974+0x3>
+     7f6:	60 93 7c 00 	sts	0x007C, r22	; 0x80007c <updateTimer.1974+0x4>
+     7fa:	70 93 7d 00 	sts	0x007D, r23	; 0x80007d <updateTimer.1974+0x5>
+     7fe:	80 93 7e 00 	sts	0x007E, r24	; 0x80007e <updateTimer.1974+0x6>
+     802:	90 93 7f 00 	sts	0x007F, r25	; 0x80007f <updateTimer.1974+0x7>
+     806:	c8 c0       	rjmp	.+400    	; 0x998 <__stack+0x139>
+	}else if(currentTurnDirection == -1){
+     808:	ef 3f       	cpi	r30, 0xFF	; 255
+     80a:	af ef       	ldi	r26, 0xFF	; 255
+     80c:	fa 07       	cpc	r31, r26
+     80e:	f1 f5       	brne	.+124    	; 0x88c <__stack+0x2d>
+		if(currentDriveSpeed == 0){
+     810:	a0 e0       	ldi	r26, 0x00	; 0
+     812:	0e 94 0d 0a 	call	0x141a	; 0x141a <__cmpdi2_s8>
+     816:	f9 f4       	brne	.+62     	; 0x856 <__LOCK_REGION_LENGTH__+0x456>
+			leftMotorDirection = 0;
+     818:	10 92 63 00 	sts	0x0063, r1	; 0x800063 <leftMotorDirection.1980+0x1>
+     81c:	10 92 62 00 	sts	0x0062, r1	; 0x800062 <leftMotorDirection.1980>
+			rightMotorDirection = 1;
+     820:	81 e0       	ldi	r24, 0x01	; 1
+     822:	90 e0       	ldi	r25, 0x00	; 0
+     824:	90 93 61 00 	sts	0x0061, r25	; 0x800061 <__data_start+0x1>
+     828:	80 93 60 00 	sts	0x0060, r24	; 0x800060 <__data_start>
+			leftMotorSpeed = driveSpeedThreshold + turnRate*2;
+     82c:	88 ef       	ldi	r24, 0xF8	; 248
+     82e:	9a e2       	ldi	r25, 0x2A	; 42
+     830:	a0 e0       	ldi	r26, 0x00	; 0
+     832:	b0 e0       	ldi	r27, 0x00	; 0
+     834:	80 93 6c 00 	sts	0x006C, r24	; 0x80006c <leftMotorSpeed.1982>
+     838:	90 93 6d 00 	sts	0x006D, r25	; 0x80006d <leftMotorSpeed.1982+0x1>
+     83c:	a0 93 6e 00 	sts	0x006E, r26	; 0x80006e <leftMotorSpeed.1982+0x2>
+     840:	b0 93 6f 00 	sts	0x006F, r27	; 0x80006f <leftMotorSpeed.1982+0x3>
+			rightMotorSpeed = driveSpeedThreshold + turnRate*2;
+     844:	80 93 68 00 	sts	0x0068, r24	; 0x800068 <rightMotorSpeed.1983>
+     848:	90 93 69 00 	sts	0x0069, r25	; 0x800069 <rightMotorSpeed.1983+0x1>
+     84c:	a0 93 6a 00 	sts	0x006A, r26	; 0x80006a <rightMotorSpeed.1983+0x2>
+     850:	b0 93 6b 00 	sts	0x006B, r27	; 0x80006b <rightMotorSpeed.1983+0x3>
+     854:	22 c1       	rjmp	.+580    	; 0xa9a <__stack+0x23b>
+		}else{
+			leftMotorSpeed = driveSpeedThreshold;
+     856:	88 e8       	ldi	r24, 0x88	; 136
+     858:	93 e1       	ldi	r25, 0x13	; 19
+     85a:	a0 e0       	ldi	r26, 0x00	; 0
+     85c:	b0 e0       	ldi	r27, 0x00	; 0
+     85e:	80 93 6c 00 	sts	0x006C, r24	; 0x80006c <leftMotorSpeed.1982>
+     862:	90 93 6d 00 	sts	0x006D, r25	; 0x80006d <leftMotorSpeed.1982+0x1>
+     866:	a0 93 6e 00 	sts	0x006E, r26	; 0x80006e <leftMotorSpeed.1982+0x2>
+     86a:	b0 93 6f 00 	sts	0x006F, r27	; 0x80006f <leftMotorSpeed.1982+0x3>
+			rightMotorSpeed += turnRate;
+     86e:	e8 eb       	ldi	r30, 0xB8	; 184
+     870:	ce 0e       	add	r12, r30
+     872:	eb e0       	ldi	r30, 0x0B	; 11
+     874:	de 1e       	adc	r13, r30
+     876:	e1 1c       	adc	r14, r1
+     878:	f1 1c       	adc	r15, r1
+     87a:	c0 92 68 00 	sts	0x0068, r12	; 0x800068 <rightMotorSpeed.1983>
+     87e:	d0 92 69 00 	sts	0x0069, r13	; 0x800069 <rightMotorSpeed.1983+0x1>
+     882:	e0 92 6a 00 	sts	0x006A, r14	; 0x80006a <rightMotorSpeed.1983+0x2>
+     886:	f0 92 6b 00 	sts	0x006B, r15	; 0x80006b <rightMotorSpeed.1983+0x3>
+     88a:	86 c0       	rjmp	.+268    	; 0x998 <__stack+0x139>
+>>>>>>> Stashed changes
 		}
 	}else if(currentTurnDirection == 0){							//Encoder crap
      8b8:	30 97       	sbiw	r30, 0x00	; 0
@@ -1156,6 +1535,7 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
      8dc:	73 c0       	rjmp	.+230    	; 0x9c4 <__stack+0x165>
 			if(motorEncoderLVal - motorEncoderRVal > 0){
 				rightMotorSpeed += ( rightMotorSpeed * sqrt(pow((motorEncoderLVal - motorEncoderRVal), 2)) ) / 100;
+<<<<<<< Updated upstream
      8de:	c7 01       	movw	r24, r14
      8e0:	b6 01       	movw	r22, r12
      8e2:	0e 94 f4 06 	call	0xde8	; 0xde8 <__floatunsisf>
@@ -1195,6 +1575,47 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
      93a:	80 93 6a 00 	sts	0x006A, r24	; 0x80006a <rightMotorSpeed.1817+0x2>
      93e:	90 93 6b 00 	sts	0x006B, r25	; 0x80006b <rightMotorSpeed.1817+0x3>
      942:	40 c0       	rjmp	.+128    	; 0x9c4 <__stack+0x165>
+=======
+     8b2:	c7 01       	movw	r24, r14
+     8b4:	b6 01       	movw	r22, r12
+     8b6:	0e 94 d7 06 	call	0xdae	; 0xdae <__floatunsisf>
+     8ba:	6b 01       	movw	r12, r22
+     8bc:	7c 01       	movw	r14, r24
+     8be:	6d 89       	ldd	r22, Y+21	; 0x15
+     8c0:	7e 89       	ldd	r23, Y+22	; 0x16
+     8c2:	60 1b       	sub	r22, r16
+     8c4:	71 0b       	sbc	r23, r17
+     8c6:	80 e0       	ldi	r24, 0x00	; 0
+     8c8:	90 e0       	ldi	r25, 0x00	; 0
+     8ca:	0e 94 d7 06 	call	0xdae	; 0xdae <__floatunsisf>
+     8ce:	4b 01       	movw	r8, r22
+     8d0:	5c 01       	movw	r10, r24
+     8d2:	a5 01       	movw	r20, r10
+     8d4:	94 01       	movw	r18, r8
+     8d6:	c5 01       	movw	r24, r10
+     8d8:	b4 01       	movw	r22, r8
+     8da:	0e 94 b3 07 	call	0xf66	; 0xf66 <__mulsf3>
+     8de:	0e 94 26 08 	call	0x104c	; 0x104c <sqrt>
+     8e2:	9b 01       	movw	r18, r22
+     8e4:	ac 01       	movw	r20, r24
+     8e6:	c7 01       	movw	r24, r14
+     8e8:	b6 01       	movw	r22, r12
+     8ea:	0e 94 b3 07 	call	0xf66	; 0xf66 <__mulsf3>
+     8ee:	20 e0       	ldi	r18, 0x00	; 0
+     8f0:	30 e0       	ldi	r19, 0x00	; 0
+     8f2:	48 ec       	ldi	r20, 0xC8	; 200
+     8f4:	52 e4       	ldi	r21, 0x42	; 66
+     8f6:	0e 94 30 06 	call	0xc60	; 0xc60 <__divsf3>
+     8fa:	a7 01       	movw	r20, r14
+     8fc:	96 01       	movw	r18, r12
+     8fe:	0e 94 c4 05 	call	0xb88	; 0xb88 <__addsf3>
+     902:	0e 94 a2 06 	call	0xd44	; 0xd44 <__fixunssfsi>
+     906:	60 93 68 00 	sts	0x0068, r22	; 0x800068 <rightMotorSpeed.1983>
+     90a:	70 93 69 00 	sts	0x0069, r23	; 0x800069 <rightMotorSpeed.1983+0x1>
+     90e:	80 93 6a 00 	sts	0x006A, r24	; 0x80006a <rightMotorSpeed.1983+0x2>
+     912:	90 93 6b 00 	sts	0x006B, r25	; 0x80006b <rightMotorSpeed.1983+0x3>
+     916:	40 c0       	rjmp	.+128    	; 0x998 <__stack+0x139>
+>>>>>>> Stashed changes
 			}else{
 				rightMotorSpeed -= ( rightMotorSpeed * sqrt(pow((motorEncoderLVal - motorEncoderRVal), 2)) ) / 100;
 			}
@@ -1207,14 +1628,22 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
      94a:	0e 94 2a 0a 	call	0x1454	; 0x1454 <__cmpdi2_s8>
      94e:	f9 f4       	brne	.+62     	; 0x98e <__stack+0x12f>
 			leftMotorDirection = 1;
+<<<<<<< Updated upstream
      950:	81 e0       	ldi	r24, 0x01	; 1
      952:	90 e0       	ldi	r25, 0x00	; 0
      954:	90 93 63 00 	sts	0x0063, r25	; 0x800063 <leftMotorDirection.1814+0x1>
      958:	80 93 62 00 	sts	0x0062, r24	; 0x800062 <leftMotorDirection.1814>
+=======
+     924:	81 e0       	ldi	r24, 0x01	; 1
+     926:	90 e0       	ldi	r25, 0x00	; 0
+     928:	90 93 63 00 	sts	0x0063, r25	; 0x800063 <leftMotorDirection.1980+0x1>
+     92c:	80 93 62 00 	sts	0x0062, r24	; 0x800062 <leftMotorDirection.1980>
+>>>>>>> Stashed changes
 			rightMotorDirection = 0;
      95c:	10 92 61 00 	sts	0x0061, r1	; 0x800061 <__data_start+0x1>
      960:	10 92 60 00 	sts	0x0060, r1	; 0x800060 <__data_start>
 			leftMotorSpeed = driveSpeedThreshold + turnRate*2;
+<<<<<<< Updated upstream
      964:	88 ef       	ldi	r24, 0xF8	; 248
      966:	9a e2       	ldi	r25, 0x2A	; 42
      968:	a0 e0       	ldi	r26, 0x00	; 0
@@ -1251,12 +1680,51 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
      9ba:	a0 93 6a 00 	sts	0x006A, r26	; 0x80006a <rightMotorSpeed.1817+0x2>
      9be:	b0 93 6b 00 	sts	0x006B, r27	; 0x80006b <rightMotorSpeed.1817+0x3>
      9c2:	81 c0       	rjmp	.+258    	; 0xac6 <__stack+0x267>
+=======
+     938:	88 ef       	ldi	r24, 0xF8	; 248
+     93a:	9a e2       	ldi	r25, 0x2A	; 42
+     93c:	a0 e0       	ldi	r26, 0x00	; 0
+     93e:	b0 e0       	ldi	r27, 0x00	; 0
+     940:	80 93 6c 00 	sts	0x006C, r24	; 0x80006c <leftMotorSpeed.1982>
+     944:	90 93 6d 00 	sts	0x006D, r25	; 0x80006d <leftMotorSpeed.1982+0x1>
+     948:	a0 93 6e 00 	sts	0x006E, r26	; 0x80006e <leftMotorSpeed.1982+0x2>
+     94c:	b0 93 6f 00 	sts	0x006F, r27	; 0x80006f <leftMotorSpeed.1982+0x3>
+			rightMotorSpeed = driveSpeedThreshold + turnRate*2;
+     950:	80 93 68 00 	sts	0x0068, r24	; 0x800068 <rightMotorSpeed.1983>
+     954:	90 93 69 00 	sts	0x0069, r25	; 0x800069 <rightMotorSpeed.1983+0x1>
+     958:	a0 93 6a 00 	sts	0x006A, r26	; 0x80006a <rightMotorSpeed.1983+0x2>
+     95c:	b0 93 6b 00 	sts	0x006B, r27	; 0x80006b <rightMotorSpeed.1983+0x3>
+     960:	9c c0       	rjmp	.+312    	; 0xa9a <__stack+0x23b>
+			}else{
+			leftMotorSpeed += turnRate;
+     962:	38 eb       	ldi	r19, 0xB8	; 184
+     964:	c3 0e       	add	r12, r19
+     966:	3b e0       	ldi	r19, 0x0B	; 11
+     968:	d3 1e       	adc	r13, r19
+     96a:	e1 1c       	adc	r14, r1
+     96c:	f1 1c       	adc	r15, r1
+     96e:	c0 92 6c 00 	sts	0x006C, r12	; 0x80006c <leftMotorSpeed.1982>
+     972:	d0 92 6d 00 	sts	0x006D, r13	; 0x80006d <leftMotorSpeed.1982+0x1>
+     976:	e0 92 6e 00 	sts	0x006E, r14	; 0x80006e <leftMotorSpeed.1982+0x2>
+     97a:	f0 92 6f 00 	sts	0x006F, r15	; 0x80006f <leftMotorSpeed.1982+0x3>
+			rightMotorSpeed = driveSpeedThreshold;
+     97e:	88 e8       	ldi	r24, 0x88	; 136
+     980:	93 e1       	ldi	r25, 0x13	; 19
+     982:	a0 e0       	ldi	r26, 0x00	; 0
+     984:	b0 e0       	ldi	r27, 0x00	; 0
+     986:	80 93 68 00 	sts	0x0068, r24	; 0x800068 <rightMotorSpeed.1983>
+     98a:	90 93 69 00 	sts	0x0069, r25	; 0x800069 <rightMotorSpeed.1983+0x1>
+     98e:	a0 93 6a 00 	sts	0x006A, r26	; 0x80006a <rightMotorSpeed.1983+0x2>
+     992:	b0 93 6b 00 	sts	0x006B, r27	; 0x80006b <rightMotorSpeed.1983+0x3>
+     996:	81 c0       	rjmp	.+258    	; 0xa9a <__stack+0x23b>
+>>>>>>> Stashed changes
 		}
 	}
 	
 	
 	//Deviation correction
 	rightMotorSpeed += (rightMotorSpeed * deviationCorrection) / 100;
+<<<<<<< Updated upstream
      9c4:	c0 90 68 00 	lds	r12, 0x0068	; 0x800068 <rightMotorSpeed.1817>
      9c8:	d0 90 69 00 	lds	r13, 0x0069	; 0x800069 <rightMotorSpeed.1817+0x1>
      9cc:	e0 90 6a 00 	lds	r14, 0x006A	; 0x80006a <rightMotorSpeed.1817+0x2>
@@ -1302,10 +1770,58 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
      a24:	d0 92 69 00 	sts	0x0069, r13	; 0x800069 <rightMotorSpeed.1817+0x1>
      a28:	e0 92 6a 00 	sts	0x006A, r14	; 0x80006a <rightMotorSpeed.1817+0x2>
      a2c:	f0 92 6b 00 	sts	0x006B, r15	; 0x80006b <rightMotorSpeed.1817+0x3>
+=======
+     998:	c0 90 68 00 	lds	r12, 0x0068	; 0x800068 <rightMotorSpeed.1983>
+     99c:	d0 90 69 00 	lds	r13, 0x0069	; 0x800069 <rightMotorSpeed.1983+0x1>
+     9a0:	e0 90 6a 00 	lds	r14, 0x006A	; 0x80006a <rightMotorSpeed.1983+0x2>
+     9a4:	f0 90 6b 00 	lds	r15, 0x006B	; 0x80006b <rightMotorSpeed.1983+0x3>
+     9a8:	d7 01       	movw	r26, r14
+     9aa:	c6 01       	movw	r24, r12
+     9ac:	88 0f       	add	r24, r24
+     9ae:	99 1f       	adc	r25, r25
+     9b0:	aa 1f       	adc	r26, r26
+     9b2:	bb 1f       	adc	r27, r27
+     9b4:	8c 0d       	add	r24, r12
+     9b6:	9d 1d       	adc	r25, r13
+     9b8:	ae 1d       	adc	r26, r14
+     9ba:	bf 1d       	adc	r27, r15
+     9bc:	ac 01       	movw	r20, r24
+     9be:	bd 01       	movw	r22, r26
+     9c0:	44 0f       	add	r20, r20
+     9c2:	55 1f       	adc	r21, r21
+     9c4:	66 1f       	adc	r22, r22
+     9c6:	77 1f       	adc	r23, r23
+     9c8:	44 0f       	add	r20, r20
+     9ca:	55 1f       	adc	r21, r21
+     9cc:	66 1f       	adc	r22, r22
+     9ce:	77 1f       	adc	r23, r23
+     9d0:	8c 01       	movw	r16, r24
+     9d2:	9d 01       	movw	r18, r26
+     9d4:	04 0f       	add	r16, r20
+     9d6:	15 1f       	adc	r17, r21
+     9d8:	26 1f       	adc	r18, r22
+     9da:	37 1f       	adc	r19, r23
+     9dc:	c9 01       	movw	r24, r18
+     9de:	b8 01       	movw	r22, r16
+     9e0:	24 e6       	ldi	r18, 0x64	; 100
+     9e2:	30 e0       	ldi	r19, 0x00	; 0
+     9e4:	40 e0       	ldi	r20, 0x00	; 0
+     9e6:	50 e0       	ldi	r21, 0x00	; 0
+     9e8:	0e 94 7b 08 	call	0x10f6	; 0x10f6 <__udivmodsi4>
+     9ec:	c2 0e       	add	r12, r18
+     9ee:	d3 1e       	adc	r13, r19
+     9f0:	e4 1e       	adc	r14, r20
+     9f2:	f5 1e       	adc	r15, r21
+     9f4:	c0 92 68 00 	sts	0x0068, r12	; 0x800068 <rightMotorSpeed.1983>
+     9f8:	d0 92 69 00 	sts	0x0069, r13	; 0x800069 <rightMotorSpeed.1983+0x1>
+     9fc:	e0 92 6a 00 	sts	0x006A, r14	; 0x80006a <rightMotorSpeed.1983+0x2>
+     a00:	f0 92 6b 00 	sts	0x006B, r15	; 0x80006b <rightMotorSpeed.1983+0x3>
+>>>>>>> Stashed changes
 	
 	
 	//Final safety check
 	if(leftMotorSpeed > 25600){						//Check if we did not accidentally set a speed higher than allowed on the left motor
+<<<<<<< Updated upstream
      a30:	80 91 6c 00 	lds	r24, 0x006C	; 0x80006c <leftMotorSpeed.1816>
      a34:	90 91 6d 00 	lds	r25, 0x006D	; 0x80006d <leftMotorSpeed.1816+0x1>
      a38:	a0 91 6e 00 	lds	r26, 0x006E	; 0x80006e <leftMotorSpeed.1816+0x2>
@@ -1324,6 +1840,26 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
      a56:	90 93 6d 00 	sts	0x006D, r25	; 0x80006d <leftMotorSpeed.1816+0x1>
      a5a:	a0 93 6e 00 	sts	0x006E, r26	; 0x80006e <leftMotorSpeed.1816+0x2>
      a5e:	b0 93 6f 00 	sts	0x006F, r27	; 0x80006f <leftMotorSpeed.1816+0x3>
+=======
+     a04:	80 91 6c 00 	lds	r24, 0x006C	; 0x80006c <leftMotorSpeed.1982>
+     a08:	90 91 6d 00 	lds	r25, 0x006D	; 0x80006d <leftMotorSpeed.1982+0x1>
+     a0c:	a0 91 6e 00 	lds	r26, 0x006E	; 0x80006e <leftMotorSpeed.1982+0x2>
+     a10:	b0 91 6f 00 	lds	r27, 0x006F	; 0x80006f <leftMotorSpeed.1982+0x3>
+     a14:	81 30       	cpi	r24, 0x01	; 1
+     a16:	94 46       	sbci	r25, 0x64	; 100
+     a18:	a1 05       	cpc	r26, r1
+     a1a:	b1 05       	cpc	r27, r1
+     a1c:	60 f0       	brcs	.+24     	; 0xa36 <__stack+0x1d7>
+		leftMotorSpeed = 25600;							//If we did, set it back to its max
+     a1e:	80 e0       	ldi	r24, 0x00	; 0
+     a20:	94 e6       	ldi	r25, 0x64	; 100
+     a22:	a0 e0       	ldi	r26, 0x00	; 0
+     a24:	b0 e0       	ldi	r27, 0x00	; 0
+     a26:	80 93 6c 00 	sts	0x006C, r24	; 0x80006c <leftMotorSpeed.1982>
+     a2a:	90 93 6d 00 	sts	0x006D, r25	; 0x80006d <leftMotorSpeed.1982+0x1>
+     a2e:	a0 93 6e 00 	sts	0x006E, r26	; 0x80006e <leftMotorSpeed.1982+0x2>
+     a32:	b0 93 6f 00 	sts	0x006F, r27	; 0x80006f <leftMotorSpeed.1982+0x3>
+>>>>>>> Stashed changes
 	}
 	if(rightMotorSpeed > 30000){					//Since the right motor is used to stabilize the left, it is allowed to go a little faster. But if it is even more than that
      a62:	21 e3       	ldi	r18, 0x31	; 49
@@ -1334,6 +1870,7 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
      a6c:	f1 04       	cpc	r15, r1
      a6e:	60 f0       	brcs	.+24     	; 0xa88 <__stack+0x229>
 		rightMotorSpeed = 30000;						//Set it back to its max
+<<<<<<< Updated upstream
      a70:	80 e3       	ldi	r24, 0x30	; 48
      a72:	95 e7       	ldi	r25, 0x75	; 117
      a74:	a0 e0       	ldi	r26, 0x00	; 0
@@ -1342,15 +1879,32 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
      a7c:	90 93 69 00 	sts	0x0069, r25	; 0x800069 <rightMotorSpeed.1817+0x1>
      a80:	a0 93 6a 00 	sts	0x006A, r26	; 0x80006a <rightMotorSpeed.1817+0x2>
      a84:	b0 93 6b 00 	sts	0x006B, r27	; 0x80006b <rightMotorSpeed.1817+0x3>
+=======
+     a44:	80 e3       	ldi	r24, 0x30	; 48
+     a46:	95 e7       	ldi	r25, 0x75	; 117
+     a48:	a0 e0       	ldi	r26, 0x00	; 0
+     a4a:	b0 e0       	ldi	r27, 0x00	; 0
+     a4c:	80 93 68 00 	sts	0x0068, r24	; 0x800068 <rightMotorSpeed.1983>
+     a50:	90 93 69 00 	sts	0x0069, r25	; 0x800069 <rightMotorSpeed.1983+0x1>
+     a54:	a0 93 6a 00 	sts	0x006A, r26	; 0x80006a <rightMotorSpeed.1983+0x2>
+     a58:	b0 93 6b 00 	sts	0x006B, r27	; 0x80006b <rightMotorSpeed.1983+0x3>
+>>>>>>> Stashed changes
 	}
 	
 	
 	//Set motor direction
 	if(leftMotorDirection){
+<<<<<<< Updated upstream
      a88:	80 91 62 00 	lds	r24, 0x0062	; 0x800062 <leftMotorDirection.1814>
      a8c:	90 91 63 00 	lds	r25, 0x0063	; 0x800063 <leftMotorDirection.1814+0x1>
      a90:	89 2b       	or	r24, r25
      a92:	11 f0       	breq	.+4      	; 0xa98 <__stack+0x239>
+=======
+     a5c:	80 91 62 00 	lds	r24, 0x0062	; 0x800062 <leftMotorDirection.1980>
+     a60:	90 91 63 00 	lds	r25, 0x0063	; 0x800063 <leftMotorDirection.1980+0x1>
+     a64:	89 2b       	or	r24, r25
+     a66:	11 f0       	breq	.+4      	; 0xa6c <__stack+0x20d>
+>>>>>>> Stashed changes
 		PORTC &= 0b11111011;
      a94:	aa 98       	cbi	0x15, 2	; 21
      a96:	01 c0       	rjmp	.+2      	; 0xa9a <__stack+0x23b>
@@ -1374,6 +1928,7 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
 	
 	//Engage the motors
 	OCR1A = rightMotorSpeed;						//Set the calculated value to the PWM compare to engage the right motor
+<<<<<<< Updated upstream
      aac:	80 91 68 00 	lds	r24, 0x0068	; 0x800068 <rightMotorSpeed.1817>
      ab0:	90 91 69 00 	lds	r25, 0x0069	; 0x800069 <rightMotorSpeed.1817+0x1>
      ab4:	9b bd       	out	0x2b, r25	; 43
@@ -1383,6 +1938,17 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
      abc:	90 91 6d 00 	lds	r25, 0x006D	; 0x80006d <leftMotorSpeed.1816+0x1>
      ac0:	99 bd       	out	0x29, r25	; 41
      ac2:	88 bd       	out	0x28, r24	; 40
+=======
+     a80:	80 91 68 00 	lds	r24, 0x0068	; 0x800068 <rightMotorSpeed.1983>
+     a84:	90 91 69 00 	lds	r25, 0x0069	; 0x800069 <rightMotorSpeed.1983+0x1>
+     a88:	9b bd       	out	0x2b, r25	; 43
+     a8a:	8a bd       	out	0x2a, r24	; 42
+	OCR1B = leftMotorSpeed;							//And do the same for the left one
+     a8c:	80 91 6c 00 	lds	r24, 0x006C	; 0x80006c <leftMotorSpeed.1982>
+     a90:	90 91 6d 00 	lds	r25, 0x006D	; 0x80006d <leftMotorSpeed.1982+0x1>
+     a94:	99 bd       	out	0x29, r25	; 41
+     a96:	88 bd       	out	0x28, r24	; 40
+>>>>>>> Stashed changes
 	
 	return 0;
      ac4:	45 c0       	rjmp	.+138    	; 0xb50 <__stack+0x2f1>
@@ -1392,6 +1958,7 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
 	
 	//Deviation correction
 	rightMotorSpeed += (rightMotorSpeed * deviationCorrection) / 100;
+<<<<<<< Updated upstream
      ac6:	c0 90 68 00 	lds	r12, 0x0068	; 0x800068 <rightMotorSpeed.1817>
      aca:	d0 90 69 00 	lds	r13, 0x0069	; 0x800069 <rightMotorSpeed.1817+0x1>
      ace:	e0 90 6a 00 	lds	r14, 0x006A	; 0x80006a <rightMotorSpeed.1817+0x2>
@@ -1437,10 +2004,58 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
      b26:	d0 92 69 00 	sts	0x0069, r13	; 0x800069 <rightMotorSpeed.1817+0x1>
      b2a:	e0 92 6a 00 	sts	0x006A, r14	; 0x80006a <rightMotorSpeed.1817+0x2>
      b2e:	f0 92 6b 00 	sts	0x006B, r15	; 0x80006b <rightMotorSpeed.1817+0x3>
+=======
+     a9a:	c0 90 68 00 	lds	r12, 0x0068	; 0x800068 <rightMotorSpeed.1983>
+     a9e:	d0 90 69 00 	lds	r13, 0x0069	; 0x800069 <rightMotorSpeed.1983+0x1>
+     aa2:	e0 90 6a 00 	lds	r14, 0x006A	; 0x80006a <rightMotorSpeed.1983+0x2>
+     aa6:	f0 90 6b 00 	lds	r15, 0x006B	; 0x80006b <rightMotorSpeed.1983+0x3>
+     aaa:	d7 01       	movw	r26, r14
+     aac:	c6 01       	movw	r24, r12
+     aae:	88 0f       	add	r24, r24
+     ab0:	99 1f       	adc	r25, r25
+     ab2:	aa 1f       	adc	r26, r26
+     ab4:	bb 1f       	adc	r27, r27
+     ab6:	8c 0d       	add	r24, r12
+     ab8:	9d 1d       	adc	r25, r13
+     aba:	ae 1d       	adc	r26, r14
+     abc:	bf 1d       	adc	r27, r15
+     abe:	ac 01       	movw	r20, r24
+     ac0:	bd 01       	movw	r22, r26
+     ac2:	44 0f       	add	r20, r20
+     ac4:	55 1f       	adc	r21, r21
+     ac6:	66 1f       	adc	r22, r22
+     ac8:	77 1f       	adc	r23, r23
+     aca:	44 0f       	add	r20, r20
+     acc:	55 1f       	adc	r21, r21
+     ace:	66 1f       	adc	r22, r22
+     ad0:	77 1f       	adc	r23, r23
+     ad2:	8c 01       	movw	r16, r24
+     ad4:	9d 01       	movw	r18, r26
+     ad6:	04 0f       	add	r16, r20
+     ad8:	15 1f       	adc	r17, r21
+     ada:	26 1f       	adc	r18, r22
+     adc:	37 1f       	adc	r19, r23
+     ade:	c9 01       	movw	r24, r18
+     ae0:	b8 01       	movw	r22, r16
+     ae2:	24 e6       	ldi	r18, 0x64	; 100
+     ae4:	30 e0       	ldi	r19, 0x00	; 0
+     ae6:	40 e0       	ldi	r20, 0x00	; 0
+     ae8:	50 e0       	ldi	r21, 0x00	; 0
+     aea:	0e 94 7b 08 	call	0x10f6	; 0x10f6 <__udivmodsi4>
+     aee:	c2 0e       	add	r12, r18
+     af0:	d3 1e       	adc	r13, r19
+     af2:	e4 1e       	adc	r14, r20
+     af4:	f5 1e       	adc	r15, r21
+     af6:	c0 92 68 00 	sts	0x0068, r12	; 0x800068 <rightMotorSpeed.1983>
+     afa:	d0 92 69 00 	sts	0x0069, r13	; 0x800069 <rightMotorSpeed.1983+0x1>
+     afe:	e0 92 6a 00 	sts	0x006A, r14	; 0x80006a <rightMotorSpeed.1983+0x2>
+     b02:	f0 92 6b 00 	sts	0x006B, r15	; 0x80006b <rightMotorSpeed.1983+0x3>
+>>>>>>> Stashed changes
 	
 	
 	//Final safety check
 	if(leftMotorSpeed > 25600){						//Check if we did not accidentally set a speed higher than allowed on the left motor
+<<<<<<< Updated upstream
      b32:	80 91 6c 00 	lds	r24, 0x006C	; 0x80006c <leftMotorSpeed.1816>
      b36:	90 91 6d 00 	lds	r25, 0x006D	; 0x80006d <leftMotorSpeed.1816+0x1>
      b3a:	a0 91 6e 00 	lds	r26, 0x006E	; 0x80006e <leftMotorSpeed.1816+0x2>
@@ -1452,6 +2067,19 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
      b4a:	08 f4       	brcc	.+2      	; 0xb4e <__stack+0x2ef>
      b4c:	9d cf       	rjmp	.-198    	; 0xa88 <__stack+0x229>
      b4e:	7d cf       	rjmp	.-262    	; 0xa4a <__stack+0x1eb>
+=======
+     b06:	80 91 6c 00 	lds	r24, 0x006C	; 0x80006c <leftMotorSpeed.1982>
+     b0a:	90 91 6d 00 	lds	r25, 0x006D	; 0x80006d <leftMotorSpeed.1982+0x1>
+     b0e:	a0 91 6e 00 	lds	r26, 0x006E	; 0x80006e <leftMotorSpeed.1982+0x2>
+     b12:	b0 91 6f 00 	lds	r27, 0x006F	; 0x80006f <leftMotorSpeed.1982+0x3>
+     b16:	81 30       	cpi	r24, 0x01	; 1
+     b18:	94 46       	sbci	r25, 0x64	; 100
+     b1a:	a1 05       	cpc	r26, r1
+     b1c:	b1 05       	cpc	r27, r1
+     b1e:	08 f4       	brcc	.+2      	; 0xb22 <__stack+0x2c3>
+     b20:	9d cf       	rjmp	.-198    	; 0xa5c <__stack+0x1fd>
+     b22:	7d cf       	rjmp	.-262    	; 0xa1e <__stack+0x1bf>
+>>>>>>> Stashed changes
 	//Engage the motors
 	OCR1A = rightMotorSpeed;						//Set the calculated value to the PWM compare to engage the right motor
 	OCR1B = leftMotorSpeed;							//And do the same for the left one

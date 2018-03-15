@@ -10,6 +10,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <math.h>
+#include "i2c_mst.h"
 #include "matthijs_testFunctions.h" /*Contains functions for transmitting over USART for testing purposes*/
 
 //Definitions

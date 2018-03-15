@@ -57,12 +57,13 @@ ISR(USART_INTERRUPT_VECTOR) {
 				charToInt = (int) (buffer[i] - '0');
 				intValue += charToInt * ((int)(pow(10, bufferPos - i) + 0.5));	//The 0.5 is necessary to properly convert the return value of pow() into an integer
 			}
-			bufferPos = -1;														//Reset buffer position
+			
 		}
 		if (command) {															//Only if a command is set is data transmitted
 			testTransmitUSART(command, intValue); /*test*/
 		
 			command = 0;														//Reset command
+			bufferPos = -1;													//Reset buffer position
 		}
 	}
 }

@@ -19,8 +19,8 @@
 
 //Global variables
 uint8_t statLED[2] = {64, 1};
-uint16_t motorEncoderLVal = 0;
-uint16_t motorEncoderRVal = 0;
+uint16_t motorEncoderLVal = 0;					//Segment count of the left motor encoder (Updated by interrupt)
+uint16_t motorEncoderRVal = 0;					//Same for right encoder ---^
 
 //Global motor control variables
 int8_t globalDriveDirection;		// Value -1, 0 or 1
@@ -77,6 +77,7 @@ int driveSpeed() {
 	}
 	return 0;						//If standing still
 }
+
 
 int driveDirection() {
 	
@@ -146,56 +147,62 @@ void init_motor_timer(){
 
 
 void init_motor_encoder(){
-	motorEncoderLVal = 0;
-	motorEncoderRVal = 0;
-	MCUCR |= (1 << ISC00);
-	MCUCR |= (1 << ISC10);
-	GICR |= (1 << INT0);
-	GICR |= (1 << INT1);
+	motorEncoderLVal = 0;						//Reset the motor encoder variable
+	motorEncoderRVal = 0;						//---^
+	MCUCR |= (1 << ISC00);						//Set interrupt to trigger on any logical change
+	MCUCR |= (1 << ISC10);						//---^
+	GICR |= (1 << INT0);						//Enable interrupt 0
+	GICR |= (1 << INT1);						//Enable interrupt 1
 }
 
 
 ISR(INT0_vect){
-	motorEncoderLVal++;
+	motorEncoderLVal++;							//Increase the encoder variable
 }
 
 
 ISR(INT1_vect){
-	motorEncoderRVal++;
+	motorEncoderRVal++;							//Increase the encoder variable
 }
 
 
 void enableMotorEncoder(int enable){
-	if(enable){
-		GICR |= (1 << INT0);
-		GICR |= (1 << INT1);
-	}else{
-		GICR &= ~(1 << INT0);
-		GICR &= ~(1 << INT1);
+	if(enable){									//If enable is set
+		GICR |= (1 << INT0);						//Enable the external interrupt
+		GICR |= (1 << INT1);						//---^
+	}else{										//If not set
+		GICR &= ~(1 << INT0);						//Disable the interrupt
+		GICR &= ~(1 << INT1);						//---^
 	}
 }
 
 
 int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
-	static const uint8_t accelerationRate = 30;
-	static const uint16_t turnRate = 3000;
-	static const uint16_t driveSpeedThreshold = 5000;
-	static const int deviationCorrection = 15;
+	//Motor settings
+	static int		deviationCorrection		= 15;				//Drift correction
+	static uint8_t	accelerationRate		= 30;				//Percentage to accelerate with
+	static uint16_t	turnRate				= 3000;				//Intensity to turn with
+	static uint16_t	driveSpeedThreshold		= 5000;				//Minimal power needed to actually start moving
+	static uint32_t updateSpeed				= 200000;			//Interval time between updates
+	//-------------
 	
-	static uint64_t updateTimer = 0;
-	static uint32_t updateSpeed = 200000;
+	static uint64_t updateTimer = 0;				//Declare a timer to check update interval
 	
-	static int64_t currentDriveSpeed = 0;
+	//Current dual motor values
 	static int currentDriveDirection = 1;
 	static int currentTurnDirection = 0;
-	
 	static uint32_t speedDifference = 0;
+	static int64_t currentDriveSpeed = 0;
+	//-------------------------
 	
+	//Current individual motor values
 	static int leftMotorDirection = 1;
 	static int rightMotorDirection = 1;
 	
 	static uint32_t leftMotorSpeed = 0;
 	static uint32_t rightMotorSpeed = 0;
+	//-------------------------
+	
 	
 	//Update timer
 	if(updateTimer > micros()){														//Only execute motor update code if the timer has passed
@@ -250,49 +257,49 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
 	
 	
 	//Check turn direction
-	if(turnDirection != currentTurnDirection){
-		leftMotorSpeed = currentDriveSpeed;
-		rightMotorSpeed = currentDriveSpeed;
-		currentTurnDirection = turnDirection;
-		if(currentTurnDirection == 0){
-			enableMotorEncoder(1);
-		}else{
-			enableMotorEncoder(0);
+	if(turnDirection != currentTurnDirection){						//If the turn direction is changed
+		leftMotorSpeed = currentDriveSpeed;								//Start by driving straight
+		rightMotorSpeed = currentDriveSpeed;							//---^
+		currentTurnDirection = turnDirection;							//Set the new turn direction
+		if(currentTurnDirection == 0){									//If the new direction is 0(straight)
+			enableMotorEncoder(1);											//Enable the encoders
+		}else{															//If the new direction is not straight
+			enableMotorEncoder(0);											//Disable the encoders
 		}
-		updateTimer += 200000;
-	}else if(currentTurnDirection == -1){
-		if(currentDriveSpeed == 0){
-			leftMotorDirection = 0;
-			rightMotorDirection = 1;
-			leftMotorSpeed = driveSpeedThreshold + turnRate*2;
-			rightMotorSpeed = driveSpeedThreshold + turnRate*2;
-		}else{
-			leftMotorSpeed = driveSpeedThreshold;
-			rightMotorSpeed += turnRate;
+		updateTimer += 100000;											//Add an extra delay to decrease wear and tear on the gears
+	}else if(currentTurnDirection == -1){							//If the turn direction is -1, we go left
+		if(currentDriveSpeed == 0){										//If the speed is 0, we need to turn around our axle
+			leftMotorDirection = 0;											//Turn the left motor backwards
+			rightMotorDirection = 1;										//Turn the right motor forwards
+			leftMotorSpeed = driveSpeedThreshold + turnRate*2;				//Set the speed to minimal + twice the turn rate
+			rightMotorSpeed = driveSpeedThreshold + turnRate*2;				//---^
+		}else{															//If we are driving (Forward or backwards does not matter)
+			leftMotorSpeed = driveSpeedThreshold;							//Set the left motor to minimal
+			rightMotorSpeed += turnRate;									//Increase the right motor with the turn rate
 		}
-	}else if(currentTurnDirection == 0){
+	}else if(currentTurnDirection == 0){							//Encoder crap
 		if(motorEncoderLVal != motorEncoderRVal){
 			if(motorEncoderLVal - motorEncoderRVal > 0){
 				rightMotorSpeed += ( rightMotorSpeed * sqrt(pow((motorEncoderLVal - motorEncoderRVal), 2)) ) / 100;
 			}else{
 				rightMotorSpeed -= ( rightMotorSpeed * sqrt(pow((motorEncoderLVal - motorEncoderRVal), 2)) ) / 100;
 			}
-		}
-	}else if(currentTurnDirection == 1){
-		if(currentDriveSpeed == 0){
-			leftMotorDirection = 1;
-			rightMotorDirection = 0;
-			leftMotorSpeed = driveSpeedThreshold + turnRate*2;
-			rightMotorSpeed = driveSpeedThreshold + turnRate*2;
-			}else{
-			leftMotorSpeed += turnRate;
-			rightMotorSpeed = driveSpeedThreshold;
+		}															//-------------
+	}else if(currentTurnDirection == 1){							//If the turn direction is 1, we go to the right
+		if(currentDriveSpeed == 0){										//If we stand still, we turn around our axle
+			leftMotorDirection = 1;											//Left motor forward
+			rightMotorDirection = 0;										//Right motor backward
+			leftMotorSpeed = driveSpeedThreshold + turnRate*2;				//set motor speed to minimal + twice the turn rate
+			rightMotorSpeed = driveSpeedThreshold + turnRate*2;				//---^
+			}else{														//If we are driving (Forward or backwards does not matter)
+			leftMotorSpeed += turnRate;										//Increase the left motor with the set turn rate
+			rightMotorSpeed = driveSpeedThreshold;							//Set right motor to minimal
 		}
 	}
 	
 	
 	//Deviation correction
-	rightMotorSpeed += (rightMotorSpeed * deviationCorrection) / 100;
+	rightMotorSpeed += (rightMotorSpeed * deviationCorrection) / 100;		//Set a deviation correction on the right motor
 	
 	
 	//Final safety check

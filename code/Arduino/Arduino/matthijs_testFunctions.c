@@ -32,3 +32,13 @@ void testTransmitUSART(char charToSend, int intToSend) {	//Transmits charToSend 
 	writeInt(intToSend);
 	writeString("\r\n");
 }
+
+void globalVariablesTransmitUSART(int direction, int turn, int throttle) {
+	writeString("Direction: ");
+	writeInt(direction);
+	writeString(", Turn: ");
+	writeInt(turn);
+	writeString(", Throttle: ");
+	writeInt(throttle);
+	writeString("\r\n");
+}

@@ -15,6 +15,7 @@ void writeString(char st[]);
 void writeInt(int i);
 
 void testTransmitUSART(char charToSend, int intToSend);
+void globalVariablesTransmitUSART(int direction, int turn, int throttle);
 
 
 #endif /* MATTHIJS_TESTFUNCTIONS_H_ */

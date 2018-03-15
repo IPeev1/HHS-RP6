@@ -19,6 +19,10 @@
 #define USART_INTERRUPT_VECTOR USART0_RX_vect
 #endif
 
+// Global variables
+int8_t globalDriveDirection;		// Value -1, 0 or 1
+int8_t globalTurnDirection;		// Value -1, 0 or 1
+int globalDriveThrottle;			//value between 0 - 100
 
 ISR(USART_INTERRUPT_VECTOR) {
 	static char buffer[BUFFER_SIZE];											//Character buffer to store numerals
@@ -60,10 +64,52 @@ ISR(USART_INTERRUPT_VECTOR) {
 			
 		}
 		if (command) {															//Only if a command is set is data transmitted
-			testTransmitUSART(command, intValue); /*test*/
+			
+			switch (command) {
+				
+				case 'w':
+				if (globalDriveDirection == 1) {
+					globalDriveDirection = 0;
+				} else {
+					globalDriveDirection = 1;
+				}
+				break;
+				
+				case 'a':
+				if (globalTurnDirection == -1) {
+					globalTurnDirection = 0;
+					} else {
+					globalTurnDirection = -1;
+				}
+				break;
+				
+				case 's':
+				if (globalDriveDirection == -1) {
+					globalDriveDirection = 0;
+				} else {
+					globalDriveDirection = -1;
+				}
+				break;
+				
+				case 'd':
+				if (globalTurnDirection == 1) {
+					globalTurnDirection = 0;
+					} else {
+					globalTurnDirection = 1;
+				}
+				break;
+				
+				case 't':
+				if (intValue <= 100) {
+					globalDriveThrottle = intValue;
+				}
+				break;
+			}
 		
 			command = 0;														//Reset command
 			bufferPos = -1;													//Reset buffer position
+			
+			globalVariablesTransmitUSART(globalDriveDirection, globalTurnDirection, globalDriveThrottle);
 		}
 	}
 }

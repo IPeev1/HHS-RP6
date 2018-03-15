@@ -838,11 +838,19 @@ END GROUP
                 0x00800060                PROVIDE (__data_start, .)
  *(.data)
  *(.data*)
+<<<<<<< Updated upstream
  .data.rightMotorDirection.1815
                 0x00800060        0x2 main.o
  .data.leftMotorDirection.1814
                 0x00800062        0x2 main.o
  .data.currentDriveDirection.1810
+=======
+ .data.rightMotorDirection.1981
+                0x00800060        0x2 main.o
+ .data.leftMotorDirection.1980
+                0x00800062        0x2 main.o
+ .data.currentDriveDirection.1977
+>>>>>>> Stashed changes
                 0x00800064        0x2 main.o
  *(.gnu.linkonce.d*)
  *(.rodata)
@@ -856,6 +864,7 @@ END GROUP
                 0x00800066                PROVIDE (__bss_start, .)
  *(.bss)
  *(.bss*)
+<<<<<<< Updated upstream
  .bss.currentTurnDirection.1811
                 0x00800066        0x2 main.o
  .bss.rightMotorSpeed.1817
@@ -865,6 +874,17 @@ END GROUP
  .bss.currentDriveSpeed.1813
                 0x00800070        0x8 main.o
  .bss.updateTimer.1809
+=======
+ .bss.currentTurnDirection.1978
+                0x00800066        0x2 main.o
+ .bss.rightMotorSpeed.1983
+                0x00800068        0x4 main.o
+ .bss.leftMotorSpeed.1982
+                0x0080006c        0x4 main.o
+ .bss.currentDriveSpeed.1976
+                0x00800070        0x8 main.o
+ .bss.updateTimer.1974
+>>>>>>> Stashed changes
                 0x00800078        0x8 main.o
  .bss.motorEncoderRVal
                 0x00800080        0x2 main.o
@@ -978,11 +998,19 @@ END GROUP
  *(.debug_frame)
  .debug_frame   0x00000000      0x1fc main.o
 
+<<<<<<< Updated upstream
 .debug_str      0x00000000      0x5a7
  *(.debug_str)
  .debug_str     0x00000000      0x196 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/atmel/ATmega_DFP/1.2.150/gcc/dev/atmega32/avr5/crtatmega32.o
  .debug_str     0x00000196      0x411 main.o
                                 0x45b (size before relaxing)
+=======
+.debug_str      0x00000000      0x50d
+ *(.debug_str)
+ .debug_str     0x00000000      0x196 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/atmel/ATmega_DFP/1.2.150/gcc/dev/atmega32/avr5/crtatmega32.o
+ .debug_str     0x00000196      0x377 main.o
+                                0x3c0 (size before relaxing)
+>>>>>>> Stashed changes
 
 .debug_loc      0x00000000      0x538
  *(.debug_loc)

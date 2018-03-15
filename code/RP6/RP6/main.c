@@ -22,9 +22,20 @@ uint8_t statLED[2] = {64, 1};
 uint16_t motorEncoderLVal = 0;
 uint16_t motorEncoderRVal = 0;
 
+//Global motor control variables
+int8_t globalDriveDirection;		// Value -1, 0 or 1
+int8_t globalTurnDirection;		// Value -1, 0 or 1
+int8_t globalDriveThrottle;			//value between 0 - 100
+
+
 //Functions
 void init_interrupt();							//Initialize global interrupts
 void init_LED();								//Initialize the status LEDs
+
+//Motor control functions
+int driveSpeed();
+int driveDirection();
+int turnDirection();
 
 //Micros function ------------------------------------
 uint64_t micros();								//Keep track of the amount of microseconds passed since boot
@@ -52,47 +63,27 @@ int main(void) {
 	init_LED();
 	//-----------------------
 	
-	int temp = 0;
-	uint64_t timer = 0;
-	
 	while(1){
-		motorDriver(30, 1, 0);
-	}
-	
-    while (1) {
-		if(timer < micros()){
-			temp++;
-			timer = micros() + 5000000;
-			if(temp > 3){temp = 0;}
-			PORTC ^= statLED[0];
-		}
 		
-		switch(temp){
-			case(0):
-			motorDriver(0, 1, 1);
-			PORTC &= ~statLED[0];
-			PORTB &= ~statLED[1];
-			break;
-			
-			case(1):
-			motorDriver(0, 1, -1);
-			PORTC |= statLED[0];
-			PORTB &= ~statLED[1];
-			break;
-			
-			case(2):
-			motorDriver(0, 1, 1);
-			PORTC &= ~statLED[0];
-			PORTB |= statLED[1];
-			break;
-			
-			case(3):
-			motorDriver(0, 0, -1);
-			PORTC |= statLED[0];
-			PORTB |= statLED[1];
-			break;
-		}
-    }
+		motorDriver(driveSpeed(), driveDirection(), globalTurnDirection);
+	}
+}
+
+//Motor control functions
+int driveSpeed() {
+	
+	if (globalDriveDirection) {	//If going forward or backwards
+		return globalDriveThrottle;
+	}
+	return 0;						//If standing still
+}
+
+int driveDirection() {
+	
+	if (globalDriveDirection == 1) {	//If going forward
+		return 1;
+	}
+	return 0;							//If going backwards or standing still
 }
 
 //Other functions

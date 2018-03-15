@@ -21,8 +21,8 @@
 
 // Global variables
 int8_t globalDriveDirection;		// Value -1, 0 or 1
-int8_t globalTurnDirection;		// Value -1, 0 or 1
-int globalDriveThrottle;			//value between 0 - 100
+int8_t globalTurnDirection;			// Value -1, 0 or 1
+int8_t globalDriveThrottle;			//value between 0 - 100
 
 ISR(USART_INTERRUPT_VECTOR) {
 	static char buffer[BUFFER_SIZE];											//Character buffer to store numerals

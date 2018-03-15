@@ -22,9 +22,10 @@ uint8_t statLED[2] = {64, 1};
 uint16_t motorEncoderLVal = 0;
 uint16_t motorEncoderRVal = 0;
 
-uint8_t globalDriveDirection;		// Value -1, 0 or 1
-uint8_t globalTurnDirection;		// Value -1, 0 or 1
-int globalDriveThrottle;			//value between 0 - 100
+//Global motor control variables
+int8_t globalDriveDirection;		// Value -1, 0 or 1
+int8_t globalTurnDirection;		// Value -1, 0 or 1
+int8_t globalDriveThrottle;			//value between 0 - 100
 
 
 //Functions

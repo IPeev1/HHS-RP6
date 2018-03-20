@@ -22,23 +22,24 @@
 
 //Global variables
 uint8_t statLED[2] = {64, 1};
-uint16_t motorEncoderLVal = 0;					//Segment count of the left motor encoder (Updated by interrupt)
-uint16_t motorEncoderRVal = 0;					//Same for right encoder ---^
 
-//Global motor control variables
-int8_t globalDriveDirection;		// Value -1, 0 or 1
-int8_t globalTurnDirection;		// Value -1, 0 or 1
-int8_t globalDriveThrottle;			//value between 0 - 100
-
+//Global variable struct
+struct rp6DataBP {
+	int8_t		driveSpeed;				//value between 0 - 100
+	int8_t		driveDirection;			//Value 0 or 1
+	int8_t		turnDirection;			//Value -1, 0 or 1
+	uint8_t		accelerationRate;		//Percentage to accelerate with					(Default: 30)
+	uint16_t	turnRate;				//Intensity to turn with						(Default: 3000)
+	uint16_t	driveSpeedThreshold;	//Minimal power needed to actually start moving	(Default: 5000)
+	uint32_t	updateSpeed;			//Interval time between updates					(Default: 200000)
+	uint8_t		enableBeeper;			//Set to 1 to enable reverse driving beeper		(Default: 1	(On))
+	uint16_t	motorEncoderLVal;		//Segment count of the left motor encoder		(Updated by interrupt)
+	uint16_t	motorEncoderRVal;		//Same for right encoder ---^
+	} rp6Data;
 
 //Functions
 void init_interrupt();							//Initialize global interrupts
 void init_LED();								//Initialize the status LEDs
-
-//Motor control functions
-int driveSpeed();
-int driveDirection();
-int turnDirection();
 
 //I2C functions ------------------
 ISR(TWI_vect){
@@ -46,24 +47,27 @@ ISR(TWI_vect){
 }
 uint8_t data_ont[20];
 volatile uint8_t data_flag = FALSE;
-volatile uint8_t databyte=0x33;
+volatile uint8_t databyte = 0x33;
+
 void ontvangData(uint8_t [],uint8_t);
 uint8_t verzendByte();
-
+void I2C_receiveInterpreter(uint8_t I2Cdata[]);
+void init_rp6Data();
+void rp6DataInterpreter(uint8_t I2Cdata[]);
+//----------------------------------------------------
 //Micros function ------------------------------------
 uint64_t micros();								//Keep track of the amount of microseconds passed since boot
 ISR(TIMER0_OVF_vect);							//Interrupt for Timer0, for micros()
 void init_micros();								//Configure Timer0
 volatile uint64_t t0TotalOverflow;				//Track the total overflows
 //----------------------------------------------------
-
 //Motor functions ------------------------------------
 void init_motor_io();
 void init_motor_timer();
 void init_motor_encoder();
 void init_motor();
 void enableMotorEncoder(int enable);
-int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection);		//driveSpeed: 0 - 100 | driveDirection: 0 - 1 | turnDirection: -1, 0, 1
+int motorDriver();
 //----------------------------------------------------
 
 //Main function
@@ -74,15 +78,14 @@ int main(void) {
 	
 	init_motor();
 	init_LED();
+	
 	init_i2c_slave(8);
+	
+	init_rp6Data();
 	//-----------------------
 	
 	while(1){
-		if(data_flag){
-			//doe hier dingen zodra data is ontvangen
-		}
-		data_flag = FALSE;
-		motorDriver(driveSpeed(), driveDirection(), globalTurnDirection);
+		motorDriver();
 	}
 }
 
@@ -90,30 +93,12 @@ int main(void) {
 void ontvangData(uint8_t data[],uint8_t tel){
 	for(int i=0;i<tel;++i)
 	data_ont[i]=data[i];
-	data_flag = TRUE;
+	I2C_receiveInterpreter(data_ont);
 }
+
 
 uint8_t verzendByte() {
 	return databyte++;
-}
-
-
-//Motor control functions
-int driveSpeed() {
-	
-	if (globalDriveDirection) {	//If going forward or backwards
-		return globalDriveThrottle;
-	}
-	return 0;						//If standing still
-}
-
-
-int driveDirection() {
-	
-	if (globalDriveDirection == 1) {	//If going forward
-		return 1;
-	}
-	return 0;							//If going backwards or standing still
 }
 
 //Other functions
@@ -148,6 +133,50 @@ uint64_t micros(){
 	return microsReturnValue;																						//Return the calculated value
 }
 //------------------------------------------------------
+//I2C functions ----------------------------------------
+void I2C_receiveInterpreter(uint8_t I2Cdata[]){
+	int dataSet = I2Cdata[0];
+	switch(dataSet){
+		case(1): rp6DataInterpreter(I2Cdata); break;
+	}
+}
+
+
+void init_rp6Data(){
+	rp6Data.driveSpeed = 0;
+	rp6Data.driveDirection = 1;
+	rp6Data.turnDirection = 0;
+	rp6Data.accelerationRate = 30;
+	rp6Data.turnRate = 3000;
+	rp6Data.driveSpeedThreshold = 5000;
+	rp6Data.updateSpeed = 200000;
+	rp6Data.enableBeeper = 1;
+	rp6Data.motorEncoderLVal = 0;
+	rp6Data.motorEncoderRVal = 0;
+}
+
+
+void rp6DataInterpreter(uint8_t I2Cdata[]){
+	if(I2Cdata[1]-1 == 0){
+		rp6Data.driveSpeed = 0;
+	}else{
+		rp6Data.driveSpeed = I2Cdata[1];
+	}
+	
+	if(I2Cdata[2] < 1){
+		rp6Data.driveDirection = 0;
+	}else{
+		rp6Data.driveDirection = 1;
+	}
+	
+	rp6Data.turnDirection = I2Cdata[3]-1;
+	rp6Data.accelerationRate = I2Cdata[4];
+	rp6Data.turnRate = I2Cdata[5] * 8000 / 255;
+	rp6Data.driveSpeedThreshold = I2Cdata[6] * 6000 / 255;
+	rp6Data.updateSpeed = I2Cdata[7] * 2000;
+	rp6Data.enableBeeper = I2Cdata[8];
+}
+//------------------------------------------------------
 //Motor functions --------------------------------------
 void init_motor(){
 	init_motor_io();		//Initialize the necessary ports
@@ -176,8 +205,8 @@ void init_motor_timer(){
 
 
 void init_motor_encoder(){
-	motorEncoderLVal = 0;						//Reset the motor encoder variable
-	motorEncoderRVal = 0;						//---^
+	rp6Data.motorEncoderLVal = 0;				//Reset the motor encoder variable
+	rp6Data.motorEncoderRVal = 0;				//---^
 	MCUCR |= (1 << ISC00);						//Set interrupt to trigger on any logical change
 	MCUCR |= (1 << ISC10);						//---^
 	GICR |= (1 << INT0);						//Enable interrupt 0
@@ -186,12 +215,12 @@ void init_motor_encoder(){
 
 
 ISR(INT0_vect){
-	motorEncoderLVal++;							//Increase the encoder variable
+	rp6Data.motorEncoderLVal++;							//Increase the encoder variable
 }
 
 
 ISR(INT1_vect){
-	motorEncoderRVal++;							//Increase the encoder variable
+	rp6Data.motorEncoderRVal++;							//Increase the encoder variable
 }
 
 
@@ -206,13 +235,9 @@ void enableMotorEncoder(int enable){
 }
 
 
-int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
+int motorDriver(){
 	//Motor settings
 	static int		deviationCorrection		= 15;				//Drift correction
-	static uint8_t	accelerationRate		= 30;				//Percentage to accelerate with
-	static uint16_t	turnRate				= 3000;				//Intensity to turn with
-	static uint16_t	driveSpeedThreshold		= 5000;				//Minimal power needed to actually start moving
-	static uint32_t updateSpeed				= 200000;			//Interval time between updates
 	//-------------
 	
 	static uint64_t updateTimer = 0;				//Declare a timer to check update interval
@@ -237,42 +262,42 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
 	if(updateTimer > micros()){														//Only execute motor update code if the timer has passed
 		return 0;
 	}else{
-		updateTimer = micros() + updateSpeed;											//If the timer has passed, set new timer and execute the code
+		updateTimer = micros() + rp6Data.updateSpeed;											//If the timer has passed, set new timer and execute the code
 	}
 	
 	
 	//Remap drive speed percentage
-	driveSpeed = (driveSpeed * 25600) / 100;										//The given drive speed is a percentage, remap it to a PWM compare value (Max 25600)
-	if(driveSpeed < driveSpeedThreshold){driveSpeed = 0;}								//If the speed is less than the threshold, the speed is set to 0 because the power is to low to drive --------- EDIT SUGGESTION: Rescale so that 1% gives the minimal amount of actual movement and 100% the max. Threshold and less doesn't participate ~Sander
+	rp6Data.driveSpeed = (rp6Data.driveSpeed * 25600) / 100;										//The given drive speed is a percentage, remap it to a PWM compare value (Max 25600)
+	if(rp6Data.driveSpeed < rp6Data.driveSpeedThreshold){rp6Data.driveSpeed = 0;}								//If the speed is less than the threshold, the speed is set to 0 because the power is to low to drive --------- EDIT SUGGESTION: Rescale so that 1% gives the minimal amount of actual movement and 100% the max. Threshold and less doesn't participate ~Sander
 	
 	
 	//Check and change drive direction
-	if(driveDirection != currentDriveDirection && currentDriveSpeed != 0){			//If the drive direction differs from what we are currently driving and we are not standing still
-		driveSpeed = 0;																	//Set the requested speed to 0
-	}else if(driveDirection != currentDriveDirection && currentDriveSpeed == 0){	//If the direction is wrong but we are standing still
-		currentDriveDirection = driveDirection;											//Reverse the driving direction
-		driveSpeed = 0;																	//And remain stationary for this update cycle
+	if(rp6Data.driveDirection != currentDriveDirection && currentDriveSpeed != 0){			//If the drive direction differs from what we are currently driving and we are not standing still
+		rp6Data.driveSpeed = 0;																	//Set the requested speed to 0
+	}else if(rp6Data.driveDirection != currentDriveDirection && currentDriveSpeed == 0){	//If the direction is wrong but we are standing still
+		currentDriveDirection = rp6Data.driveDirection;											//Reverse the driving direction
+		rp6Data.driveSpeed = 0;																	//And remain stationary for this update cycle
 	}
 	
 	
 	//Smoothly adjust current drive speed to requested drive speed
-	speedDifference = sqrt(pow((driveSpeed - currentDriveSpeed), 2));				//Calculate the speed difference (always positive)
+	speedDifference = sqrt(pow((rp6Data.driveSpeed - currentDriveSpeed), 2));				//Calculate the speed difference (always positive)
 	
 	if(speedDifference < 2000){														//If the difference is less than 2000
-		currentDriveSpeed = driveSpeed;													//Set the current speed to the requested value
+		currentDriveSpeed = rp6Data.driveSpeed;													//Set the current speed to the requested value
 	}else{																			//If the difference is more than 2000
-		if(driveSpeed - currentDriveSpeed < 0){											//Check if we need to accelerate or decelerate, if we need to decelerate
-			if(currentDriveSpeed < driveSpeedThreshold){									//If the speed is less than the threshold
-				currentDriveSpeed = driveSpeed;													//Set the speed to the requested value (Probably 0)
+		if(rp6Data.driveSpeed - currentDriveSpeed < 0){											//Check if we need to accelerate or decelerate, if we need to decelerate
+			if(currentDriveSpeed < rp6Data.driveSpeedThreshold){									//If the speed is less than the threshold
+				currentDriveSpeed = rp6Data.driveSpeed;													//Set the speed to the requested value (Probably 0)
 			}else{																			//If the current speed is higher than 5000
-				currentDriveSpeed -= ((currentDriveSpeed * accelerationRate)/100);				//Decelerate with a given percentage of the current speed, determined by accelerationRate
+				currentDriveSpeed -= ((currentDriveSpeed * rp6Data.accelerationRate)/100);				//Decelerate with a given percentage of the current speed, determined by accelerationRate
 			}
 		}else{																			//If we need to accelerate
-			if(currentDriveSpeed < driveSpeedThreshold){									//And we are still at a speed lower than the threshold
-				currentDriveSpeed += driveSpeedThreshold;										//Speed up with the minimum threshold
+			if(currentDriveSpeed < rp6Data.driveSpeedThreshold){									//And we are still at a speed lower than the threshold
+				currentDriveSpeed += rp6Data.driveSpeedThreshold;										//Speed up with the minimum threshold
 			}else{																			//If we are at a speed higher than the threshold
-				currentDriveSpeed += ((currentDriveSpeed * accelerationRate)/100);				//Accelerate with a percentage of the current speed, determined by accelerationRate
-				if(currentDriveSpeed > driveSpeed){currentDriveSpeed = driveSpeed;}				//If we overshot the requested speed, set the current speed to the requested value (Can't be much of a difference)
+				currentDriveSpeed += ((currentDriveSpeed * rp6Data.accelerationRate)/100);				//Accelerate with a percentage of the current speed, determined by accelerationRate
+				if(currentDriveSpeed > rp6Data.driveSpeed){currentDriveSpeed = rp6Data.driveSpeed;}				//If we overshot the requested speed, set the current speed to the requested value (Can't be much of a difference)
 			}
 		}
 	}
@@ -286,10 +311,10 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
 	
 	
 	//Check turn direction
-	if(turnDirection != currentTurnDirection){						//If the turn direction is changed
+	if(rp6Data.turnDirection != currentTurnDirection){						//If the turn direction is changed
 		leftMotorSpeed = currentDriveSpeed;								//Start by driving straight
 		rightMotorSpeed = currentDriveSpeed;							//---^
-		currentTurnDirection = turnDirection;							//Set the new turn direction
+		currentTurnDirection = rp6Data.turnDirection;							//Set the new turn direction
 		if(currentTurnDirection == 0){									//If the new direction is 0(straight)
 			enableMotorEncoder(1);											//Enable the encoders
 		}else{															//If the new direction is not straight
@@ -300,29 +325,29 @@ int motorDriver(int64_t driveSpeed, int driveDirection, int turnDirection){
 		if(currentDriveSpeed == 0){										//If the speed is 0, we need to turn around our axle
 			leftMotorDirection = 0;											//Turn the left motor backwards
 			rightMotorDirection = 1;										//Turn the right motor forwards
-			leftMotorSpeed = driveSpeedThreshold + turnRate*2;				//Set the speed to minimal + twice the turn rate
-			rightMotorSpeed = driveSpeedThreshold + turnRate*2;				//---^
+			leftMotorSpeed = rp6Data.driveSpeedThreshold + rp6Data.turnRate*2;				//Set the speed to minimal + twice the turn rate
+			rightMotorSpeed = rp6Data.driveSpeedThreshold + rp6Data.turnRate*2;				//---^
 		}else{															//If we are driving (Forward or backwards does not matter)
-			leftMotorSpeed = driveSpeedThreshold;							//Set the left motor to minimal
-			rightMotorSpeed += turnRate;									//Increase the right motor with the turn rate
+			leftMotorSpeed = rp6Data.driveSpeedThreshold;							//Set the left motor to minimal
+			rightMotorSpeed += rp6Data.turnRate;									//Increase the right motor with the turn rate
 		}
 	}else if(currentTurnDirection == 0){							//Encoder crap
-		if(motorEncoderLVal != motorEncoderRVal){
-			if(motorEncoderLVal - motorEncoderRVal > 0){
-				rightMotorSpeed += ( rightMotorSpeed * sqrt(pow((motorEncoderLVal - motorEncoderRVal), 2)) ) / 100;
+		if(rp6Data.motorEncoderLVal != rp6Data.motorEncoderRVal){
+			if(rp6Data.motorEncoderLVal - rp6Data.motorEncoderRVal > 0){
+				rightMotorSpeed += ( rightMotorSpeed * sqrt(pow((rp6Data.motorEncoderLVal - rp6Data.motorEncoderRVal), 2)) ) / 100;
 			}else{
-				rightMotorSpeed -= ( rightMotorSpeed * sqrt(pow((motorEncoderLVal - motorEncoderRVal), 2)) ) / 100;
+				rightMotorSpeed -= ( rightMotorSpeed * sqrt(pow((rp6Data.motorEncoderLVal - rp6Data.motorEncoderRVal), 2)) ) / 100;
 			}
 		}															//-------------
 	}else if(currentTurnDirection == 1){							//If the turn direction is 1, we go to the right
 		if(currentDriveSpeed == 0){										//If we stand still, we turn around our axle
 			leftMotorDirection = 1;											//Left motor forward
 			rightMotorDirection = 0;										//Right motor backward
-			leftMotorSpeed = driveSpeedThreshold + turnRate*2;				//set motor speed to minimal + twice the turn rate
-			rightMotorSpeed = driveSpeedThreshold + turnRate*2;				//---^
+			leftMotorSpeed = rp6Data.driveSpeedThreshold + rp6Data.turnRate*2;				//set motor speed to minimal + twice the turn rate
+			rightMotorSpeed = rp6Data.driveSpeedThreshold + rp6Data.turnRate*2;				//---^
 			}else{														//If we are driving (Forward or backwards does not matter)
-			leftMotorSpeed += turnRate;										//Increase the left motor with the set turn rate
-			rightMotorSpeed = driveSpeedThreshold;							//Set right motor to minimal
+			leftMotorSpeed += rp6Data.turnRate;										//Increase the left motor with the set turn rate
+			rightMotorSpeed = rp6Data.driveSpeedThreshold;							//Set right motor to minimal
 		}
 	}
 	

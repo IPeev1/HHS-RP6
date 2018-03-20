@@ -10,7 +10,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <math.h>
-#include "i2c_mst.h"
+#include "i2c_mst.c"
 #include "matthijs_testFunctions.h" /*Contains functions for transmitting over USART for testing purposes*/
 
 //Definitions
@@ -126,8 +126,13 @@ int main(void)
 	UBRR0L = 103;								//Baudrate 9600
 	
 	sei();										//Enable interrupt routines
+	init_master();
+	PORTD |= 0b00000011; //Pullup SDA and SCL
 	
-    while (1) 
-    {
-    }
+	while (1)
+	{
+		verzenden(8, globalDriveThrottle);
+		verzenden(8, globalDriveDirection);
+		verzenden(8, globalTurnDirection);
+	}
 }

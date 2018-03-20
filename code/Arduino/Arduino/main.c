@@ -20,10 +20,26 @@
 #define USART_INTERRUPT_VECTOR USART0_RX_vect
 #endif
 
+//I2C Functions -----------------------------------
+void I2C_sendConstructor(uint8_t I2Cdata[]);
+void init_rp6Data();
+void rp6DataConstructor();
+//-------------------------------------------------
+
 // Global variables
-int8_t globalDriveDirection;		// Value -1, 0 or 1
-int8_t globalTurnDirection;			// Value -1, 0 or 1
-int8_t globalDriveThrottle;			//value between 0 - 100
+struct rp6DataBP {
+	int8_t		driveSpeed;				//value between 0 - 100
+	int8_t		driveDirection;			//Value 0 or 1
+	int8_t		turnDirection;			//Value -1, 0 or 1
+	uint8_t		accelerationRate;		//Percentage to accelerate with					(Default: 30)
+	uint16_t	turnRate;				//Intensity to turn with						(Default: 3000)
+	uint16_t	driveSpeedThreshold;	//Minimal power needed to actually start moving	(Default: 5000)
+	uint32_t	updateSpeed;			//Interval time between updates					(Default: 200000)
+	uint8_t		enableBeeper;			//Set to 1 to enable reverse driving beeper		(Default: 1	(On))
+	uint16_t	motorEncoderLVal;		//Segment count of the left motor encoder		(Updated by interrupt)
+	uint16_t	motorEncoderRVal;		//Same for right encoder ---^
+} rp6Data;
+
 
 ISR(USART_INTERRUPT_VECTOR) {
 	static char buffer[BUFFER_SIZE];											//Character buffer to store numerals
@@ -69,40 +85,40 @@ ISR(USART_INTERRUPT_VECTOR) {
 			switch (command) {
 				
 				case 'w':
-				if (globalDriveDirection == 1) {
-					globalDriveDirection = 0;
+				if (rp6Data.driveDirection == 1) {
+					rp6Data.driveDirection = 0;
 				} else {
-					globalDriveDirection = 1;
+					rp6Data.driveDirection = 1;
 				}
 				break;
 				
 				case 'a':
-				if (globalTurnDirection == -1) {
-					globalTurnDirection = 0;
+				if (rp6Data.turnDirection == -1) {
+					rp6Data.turnDirection = 0;
 					} else {
-					globalTurnDirection = -1;
+					rp6Data.turnDirection = -1;
 				}
 				break;
 				
 				case 's':
-				if (globalDriveDirection == -1) {
-					globalDriveDirection = 0;
+				if (rp6Data.driveDirection == -1) {
+					rp6Data.driveDirection = 0;
 				} else {
-					globalDriveDirection = -1;
+					rp6Data.driveDirection = -1;
 				}
 				break;
 				
 				case 'd':
-				if (globalTurnDirection == 1) {
-					globalTurnDirection = 0;
+				if (rp6Data.turnDirection == 1) {
+					rp6Data.turnDirection = 0;
 					} else {
-					globalTurnDirection = 1;
+					rp6Data.turnDirection = 1;
 				}
 				break;
 				
 				case 't':
 				if (intValue <= 100) {
-					globalDriveThrottle = intValue;
+					rp6Data.driveSpeed = intValue;
 				}
 				break;
 			}
@@ -110,7 +126,7 @@ ISR(USART_INTERRUPT_VECTOR) {
 			command = 0;														//Reset command
 			bufferPos = -1;													//Reset buffer position
 			
-			globalVariablesTransmitUSART(globalDriveDirection, globalTurnDirection, globalDriveThrottle);
+			globalVariablesTransmitUSART(rp6Data.driveDirection, rp6Data.turnDirection, rp6Data.driveSpeed);
 		}
 	}
 }
@@ -120,7 +136,7 @@ int main(void)
 	//USART initialization
 	UCSR0A = 0x00;								
 	UCSR0B |= (1 << RXCIE0 | 1 << RXEN0);		//Enable USART receiver, receiver interrupt
-	UCSR0B |= 1 << TXEN0;	/*Transmitter enabled for testing*/
+	UCSR0B |= 1 << TXEN0;						/*Transmitter enabled for testing*/
 	UCSR0C |= (1 << UCSZ01 | 1 << UCSZ00);		//Asynchronous USART, Parity none, 1 Stop bit, 8-bit character size
 	UBRR0H = 00;
 	UBRR0L = 103;								//Baudrate 9600
@@ -129,10 +145,53 @@ int main(void)
 	init_master();
 	PORTD |= 0b00000011; //Pullup SDA and SCL
 	
+	
+	
 	while (1)
 	{
-		verzenden(8, globalDriveThrottle);
-		verzenden(8, globalDriveDirection);
-		verzenden(8, globalTurnDirection);
 	}
 }
+
+//I2C functions ----------------------------
+void init_rp6Data(){
+	rp6Data.driveSpeed = 0;
+	rp6Data.driveDirection = 0;
+	rp6Data.turnDirection = 0;
+	rp6Data.accelerationRate = 30;
+	rp6Data.turnRate = 3000;
+	rp6Data.driveSpeedThreshold = 5000;
+	rp6Data.updateSpeed = 200000;
+	rp6Data.enableBeeper = 1;
+	rp6Data.motorEncoderLVal = 0;
+	rp6Data.motorEncoderRVal = 0;
+}
+
+
+void rp6DataConstructor(){
+	uint8_t I2Cdata[20];
+	
+	I2Cdata[0] = 1;
+	I2Cdata[1] = rp6Data.driveSpeed;
+	I2Cdata[2] = rp6Data.driveDirection + 1;
+	I2Cdata[3] = rp6Data.turnDirection + 1;
+	I2Cdata[4] = rp6Data.accelerationRate;
+	I2Cdata[5] = rp6Data.turnRate * 255 / 8000;
+	I2Cdata[6] = rp6Data.driveSpeedThreshold * 255 / 6000;
+	I2Cdata[7] = rp6Data.updateSpeed / 2000;
+	I2Cdata[8] = rp6Data.enableBeeper;
+	
+	for(int i = 9; i <= 19; i++){
+		I2Cdata[i] = 0;
+	}
+	
+	I2C_sendConstructor(I2Cdata);
+}
+
+
+void I2C_sendConstructor(uint8_t I2Cdata[]){
+	for(int i = 0; i <= 19; i++){
+		verzenden(8, I2Cdata[i]);
+	}
+}
+
+//------------------------------------------

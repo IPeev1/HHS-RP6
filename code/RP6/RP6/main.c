@@ -23,19 +23,8 @@
 //Global variables
 uint8_t statLED[2] = {64, 1};
 
-//Global variable struct
-struct rp6DataBP {
-	int8_t		driveSpeed;				//value between 0 - 100
-	int8_t		driveDirection;			//Value 0 or 1
-	int8_t		turnDirection;			//Value -1, 0 or 1
-	uint8_t		accelerationRate;		//Percentage to accelerate with					(Default: 30)
-	uint16_t	turnRate;				//Intensity to turn with						(Default: 3000)
-	uint16_t	driveSpeedThreshold;	//Minimal power needed to actually start moving	(Default: 5000)
-	uint32_t	updateSpeed;			//Interval time between updates					(Default: 200000)
-	uint8_t		enableBeeper;			//Set to 1 to enable reverse driving beeper		(Default: 1	(On))
-	uint16_t	motorEncoderLVal;		//Segment count of the left motor encoder		(Updated by interrupt)
-	uint16_t	motorEncoderRVal;		//Same for right encoder ---^
-	} rp6Data;
+uint64_t I2CsyncTimer = 0;
+uint32_t syncSpeed = 100000;
 
 //Functions
 void init_interrupt();							//Initialize global interrupts
@@ -51,9 +40,14 @@ volatile uint8_t databyte = 0x33;
 
 void ontvangData(uint8_t [],uint8_t);
 uint8_t verzendByte();
-void I2C_receiveInterpreter(uint8_t I2Cdata[]);
+//I2C receive
 void init_rp6Data();
+void I2C_receiveInterpreter(uint8_t I2Cdata[]);
 void rp6DataInterpreter(uint8_t I2Cdata[]);
+//I2C send
+void init_arduinoData();
+void arduinoDataConstructor();
+void I2C_sendArray(uint8_t I2Cdata[]);
 //----------------------------------------------------
 //Micros function ------------------------------------
 uint64_t micros();								//Keep track of the amount of microseconds passed since boot
@@ -70,6 +64,24 @@ void enableMotorEncoder(int enable);
 int motorDriver();
 //----------------------------------------------------
 
+//Global structs
+struct rp6DataBP {
+	int8_t		driveSpeed;				//value between 0 - 100
+	int8_t		driveDirection;			//Value 0 or 1
+	int8_t		turnDirection;			//Value -1, 0 or 1
+	uint8_t		accelerationRate;		//Percentage to accelerate with					(Default: 30)
+	uint16_t	turnRate;				//Intensity to turn with						(Default: 3000)
+	uint16_t	driveSpeedThreshold;	//Minimal power needed to actually start moving	(Default: 5000)
+	uint32_t	updateSpeed;			//Interval time between updates					(Default: 200000)
+	uint8_t		enableBeeper;			//Set to 1 to enable reverse driving beeper		(Default: 1	(On))
+} rp6Data;
+
+
+struct arduinoDataBP {
+	uint16_t	motorEncoderLVal;		//Segment count of the left motor encoder		(Updated by interrupt)
+	uint16_t	motorEncoderRVal;		//Same for right encoder ---^
+} arduinoData;
+
 //Main function
 int main(void) {
 	//Initialize all functions
@@ -82,10 +94,16 @@ int main(void) {
 	init_i2c_slave(8);
 	
 	init_rp6Data();
+	init_arduinoData();
 	//-----------------------
 	
 	while(1){
 		motorDriver();
+		
+		if(I2CsyncTimer < micros()){
+			arduinoDataConstructor();
+			I2CsyncTimer = micros() + syncSpeed;
+		}
 	}
 }
 
@@ -133,15 +151,7 @@ uint64_t micros(){
 	return microsReturnValue;																						//Return the calculated value
 }
 //------------------------------------------------------
-//I2C functions ----------------------------------------
-void I2C_receiveInterpreter(uint8_t I2Cdata[]){
-	int dataSet = I2Cdata[0];
-	switch(dataSet){
-		case(1): rp6DataInterpreter(I2Cdata); break;
-	}
-}
-
-
+//I2C functions receive --------------------------------
 void init_rp6Data(){
 	rp6Data.driveSpeed = 0;
 	rp6Data.driveDirection = 1;
@@ -151,8 +161,14 @@ void init_rp6Data(){
 	rp6Data.driveSpeedThreshold = 5000;
 	rp6Data.updateSpeed = 200000;
 	rp6Data.enableBeeper = 1;
-	rp6Data.motorEncoderLVal = 0;
-	rp6Data.motorEncoderRVal = 0;
+}
+
+
+void I2C_receiveInterpreter(uint8_t I2Cdata[]){
+	int dataSet = I2Cdata[0];
+	switch(dataSet){
+		case(1): rp6DataInterpreter(I2Cdata); break;
+	}
 }
 
 
@@ -175,6 +191,34 @@ void rp6DataInterpreter(uint8_t I2Cdata[]){
 	rp6Data.driveSpeedThreshold = I2Cdata[6] * 6000 / 255;
 	rp6Data.updateSpeed = I2Cdata[7] * 2000;
 	rp6Data.enableBeeper = I2Cdata[8];
+}
+
+//I2C functions send -----------------------------------
+void init_arduinoData(){
+	arduinoData.motorEncoderLVal = 0;
+	arduinoData.motorEncoderRVal = 0;
+}
+
+
+void arduinoDataConstructor(){
+	uint8_t I2Cdata[20];
+	
+	I2Cdata[0] = 1;
+	I2Cdata[1] = arduinoData.motorEncoderLVal * 255 / 30000;
+	I2Cdata[2] = arduinoData.motorEncoderRVal * 255 / 30000;
+	
+	for(int i = 3; i <= 19; i++){
+		I2Cdata[i] = 0;
+	}
+	
+	I2C_sendArray(I2Cdata);
+}
+
+
+void I2C_sendArray(uint8_t I2Cdata[]){
+	for(int i = 0; i <= 19; i++){
+		//verzenden(8, I2Cdata[i]);
+	}
 }
 //------------------------------------------------------
 //Motor functions --------------------------------------
@@ -205,8 +249,8 @@ void init_motor_timer(){
 
 
 void init_motor_encoder(){
-	rp6Data.motorEncoderLVal = 0;				//Reset the motor encoder variable
-	rp6Data.motorEncoderRVal = 0;				//---^
+	arduinoData.motorEncoderLVal = 0;				//Reset the motor encoder variable
+	arduinoData.motorEncoderRVal = 0;				//---^
 	MCUCR |= (1 << ISC00);						//Set interrupt to trigger on any logical change
 	MCUCR |= (1 << ISC10);						//---^
 	GICR |= (1 << INT0);						//Enable interrupt 0
@@ -215,12 +259,12 @@ void init_motor_encoder(){
 
 
 ISR(INT0_vect){
-	rp6Data.motorEncoderLVal++;							//Increase the encoder variable
+	arduinoData.motorEncoderLVal++;							//Increase the encoder variable
 }
 
 
 ISR(INT1_vect){
-	rp6Data.motorEncoderRVal++;							//Increase the encoder variable
+	arduinoData.motorEncoderRVal++;							//Increase the encoder variable
 }
 
 
@@ -332,11 +376,11 @@ int motorDriver(){
 			rightMotorSpeed += rp6Data.turnRate;									//Increase the right motor with the turn rate
 		}
 	}else if(currentTurnDirection == 0){							//Encoder crap
-		if(rp6Data.motorEncoderLVal != rp6Data.motorEncoderRVal){
-			if(rp6Data.motorEncoderLVal - rp6Data.motorEncoderRVal > 0){
-				rightMotorSpeed += ( rightMotorSpeed * sqrt(pow((rp6Data.motorEncoderLVal - rp6Data.motorEncoderRVal), 2)) ) / 100;
+		if(arduinoData.motorEncoderLVal != arduinoData.motorEncoderRVal){
+			if(arduinoData.motorEncoderLVal - arduinoData.motorEncoderRVal > 0){
+				rightMotorSpeed += ( rightMotorSpeed * sqrt(pow((arduinoData.motorEncoderLVal - arduinoData.motorEncoderRVal), 2)) ) / 100;
 			}else{
-				rightMotorSpeed -= ( rightMotorSpeed * sqrt(pow((rp6Data.motorEncoderLVal - rp6Data.motorEncoderRVal), 2)) ) / 100;
+				rightMotorSpeed -= ( rightMotorSpeed * sqrt(pow((arduinoData.motorEncoderLVal - arduinoData.motorEncoderRVal), 2)) ) / 100;
 			}
 		}															//-------------
 	}else if(currentTurnDirection == 1){							//If the turn direction is 1, we go to the right

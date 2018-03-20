@@ -20,13 +20,47 @@
 #define USART_INTERRUPT_VECTOR USART0_RX_vect
 #endif
 
-//I2C Functions -----------------------------------
-void I2C_sendConstructor(uint8_t I2Cdata[]);
+//Global variables
+uint64_t I2CsyncTimer = 0;
+uint32_t syncSpeed = 100000;
+
+//Micros function ---------------------------------
+uint64_t micros();								//Keep track of the amount of microseconds passed since boot
+ISR(TIMER3_OVF_vect);							//Interrupt for Timer3, for micros()
+void init_micros();								//Configure Timer3
+volatile uint64_t t3TotalOverflow;				//Track the total overflows
+//-------------------------------------------------
+//I2C receive -------------------------------------
+void init_arduinoData();
+void I2C_receiveInterpreter(uint8_t I2Cdata[]);
+void arduinoDataInterpreter(uint8_t I2Cdata[]);
+//I2C send ----------------------------------------
 void init_rp6Data();
 void rp6DataConstructor();
+void I2C_sendArray(uint8_t I2Cdata[]);
 //-------------------------------------------------
+//Other functions ---------------------------------
+void init_interrupt(){
+	sei();									//Enable global interrupts
+}
 
-// Global variables
+
+void init_USART(){
+	//USART initialization
+	UCSR0A = 0x00;
+	UCSR0B |= (1 << RXCIE0 | 1 << RXEN0);		//Enable USART receiver, receiver interrupt
+	UCSR0B |= 1 << TXEN0;						/*Transmitter enabled for testing*/
+	UCSR0C |= (1 << UCSZ01 | 1 << UCSZ00);		//Asynchronous USART, Parity none, 1 Stop bit, 8-bit character size
+	UBRR0H = 00;
+	UBRR0L = 103;								//Baudrate 9600
+}
+
+
+void init_I2C(){
+	PORTD |= 0b00000011; //Pullup SDA and SCL
+}
+//-------------------------------------------------
+// Global Structs
 struct rp6DataBP {
 	int8_t		driveSpeed;				//value between 0 - 100
 	int8_t		driveDirection;			//Value 0 or 1
@@ -36,9 +70,13 @@ struct rp6DataBP {
 	uint16_t	driveSpeedThreshold;	//Minimal power needed to actually start moving	(Default: 5000)
 	uint32_t	updateSpeed;			//Interval time between updates					(Default: 200000)
 	uint8_t		enableBeeper;			//Set to 1 to enable reverse driving beeper		(Default: 1	(On))
+} rp6Data;
+
+
+struct arduinoDataBP {
 	uint16_t	motorEncoderLVal;		//Segment count of the left motor encoder		(Updated by interrupt)
 	uint16_t	motorEncoderRVal;		//Same for right encoder ---^
-} rp6Data;
+} arduinoData;
 
 
 ISR(USART_INTERRUPT_VECTOR) {
@@ -131,28 +169,66 @@ ISR(USART_INTERRUPT_VECTOR) {
 	}
 }
 
-int main(void)
-{	
-	//USART initialization
-	UCSR0A = 0x00;								
-	UCSR0B |= (1 << RXCIE0 | 1 << RXEN0);		//Enable USART receiver, receiver interrupt
-	UCSR0B |= 1 << TXEN0;						/*Transmitter enabled for testing*/
-	UCSR0C |= (1 << UCSZ01 | 1 << UCSZ00);		//Asynchronous USART, Parity none, 1 Stop bit, 8-bit character size
-	UBRR0H = 00;
-	UBRR0L = 103;								//Baudrate 9600
-	
-	sei();										//Enable interrupt routines
+
+int main(void){
+	//Initialize all functions
+	init_interrupt();
+	init_micros();
 	init_master();
-	PORTD |= 0b00000011; //Pullup SDA and SCL
+	init_I2C();
+	init_rp6Data();
+	init_arduinoData();
+	//-----------------------
 	
-	
-	
-	while (1)
-	{
+	while (1){
+		if(I2CsyncTimer < micros()){
+			rp6DataConstructor();
+			I2CsyncTimer = micros() + syncSpeed;
+		}
 	}
 }
 
-//I2C functions ----------------------------
+//Micros function --------------------------------------
+void init_micros(){
+	TCCR3B |= (1 << CS00);			//Set a timer prescaler of 'none'
+	TIMSK3 |= (1 << TOIE3);			//Enable overflow interrupts
+	TCNT3 = 0;						//Initialize the timer by setting it to 0
+	t3TotalOverflow = 0;			//Initialize the overflow counter by setting it to 0
+}
+
+
+ISR(TIMER3_OVF_vect){						//When the internal timer 3 overflows and loops back to 0, this interrupt triggers
+	t3TotalOverflow++;							//Increase the total overflow counter
+}
+
+
+uint64_t micros(){
+	uint8_t currentTimer3Value = TCNT3;																				//Get the current value of the Timer 0 register
+	uint64_t microsReturnValue = ((4096 * t3TotalOverflow) + (currentTimer3Value * 4096 / 65536));					//Calculate the passed microseconds based on the total amount of overflows and the current timer value.
+	return microsReturnValue;																						//Return the calculated value
+}
+//------------------------------------------------------
+//I2C functions receive --------------------
+void init_arduinoData(){
+	arduinoData.motorEncoderLVal = 0;
+	arduinoData.motorEncoderRVal = 0;
+}
+
+
+void I2C_receiveInterpreter(uint8_t I2Cdata[]){
+	int dataSet = I2Cdata[0];
+	switch(dataSet){
+		case(1): arduinoDataInterpreter(I2Cdata); break;
+	}
+}
+
+
+void arduinoDataInterpreter(uint8_t I2Cdata[]){
+	arduinoData.motorEncoderLVal = I2Cdata[1] * 30000 / 255;
+	arduinoData.motorEncoderRVal = I2Cdata[2] * 30000 / 255;
+}
+
+//I2C functions send -----------------------
 void init_rp6Data(){
 	rp6Data.driveSpeed = 0;
 	rp6Data.driveDirection = 0;
@@ -162,8 +238,6 @@ void init_rp6Data(){
 	rp6Data.driveSpeedThreshold = 5000;
 	rp6Data.updateSpeed = 200000;
 	rp6Data.enableBeeper = 1;
-	rp6Data.motorEncoderLVal = 0;
-	rp6Data.motorEncoderRVal = 0;
 }
 
 
@@ -184,14 +258,13 @@ void rp6DataConstructor(){
 		I2Cdata[i] = 0;
 	}
 	
-	I2C_sendConstructor(I2Cdata);
+	I2C_sendArray(I2Cdata);
 }
 
 
-void I2C_sendConstructor(uint8_t I2Cdata[]){
+void I2C_sendArray(uint8_t I2Cdata[]){
 	for(int i = 0; i <= 19; i++){
 		verzenden(8, I2Cdata[i]);
 	}
 }
-
 //------------------------------------------

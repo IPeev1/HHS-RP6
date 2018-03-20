@@ -10,13 +10,15 @@
  */ 
 //Defines
 #define F_CPU 8000000
+#define TRUE 0xFF;
+#define FALSE 0;
 
 //Includes
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <math.h>
 #include <util/delay.h>
-#include "i2c.h"
+#include "i2c.c"
 
 //Global variables
 uint8_t statLED[2] = {64, 1};
@@ -37,6 +39,16 @@ void init_LED();								//Initialize the status LEDs
 int driveSpeed();
 int driveDirection();
 int turnDirection();
+
+//I2C functions ------------------
+ISR(TWI_vect){
+	slaaftwi();
+}
+uint8_t data_ont[20];
+volatile uint8_t data_flag = FALSE;
+volatile uint8_t databyte=0x33;
+void ontvangData(uint8_t [],uint8_t);
+uint8_t verzendByte();
 
 //Micros function ------------------------------------
 uint64_t micros();								//Keep track of the amount of microseconds passed since boot
@@ -62,13 +74,29 @@ int main(void) {
 	
 	init_motor();
 	init_LED();
+	init_i2c_slave(8);
 	//-----------------------
 	
 	while(1){
-		
+		if(data_flag){
+			//doe hier dingen zodra data is ontvangen
+		}
+		data_flag = FALSE;
 		motorDriver(driveSpeed(), driveDirection(), globalTurnDirection);
 	}
 }
+
+//I2C control functions
+void ontvangData(uint8_t data[],uint8_t tel){
+	for(int i=0;i<tel;++i)
+	data_ont[i]=data[i];
+	data_flag = TRUE;
+}
+
+uint8_t verzendByte() {
+	return databyte++;
+}
+
 
 //Motor control functions
 int driveSpeed() {

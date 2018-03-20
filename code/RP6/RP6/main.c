@@ -157,7 +157,7 @@ void init_rp6Data(){
 
 
 void rp6DataInterpreter(uint8_t I2Cdata[]){
-	if(I2Cdata[1]-1 == 0){
+	if(I2Cdata[2]-1 == 0){
 		rp6Data.driveSpeed = 0;
 	}else{
 		rp6Data.driveSpeed = I2Cdata[1];

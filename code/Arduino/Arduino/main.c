@@ -10,10 +10,11 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <math.h>
-#include "i2c_mst.h"
+#include "i2c_mst.c"
 #include "matthijs_testFunctions.h" /*Contains functions for transmitting over USART for testing purposes*/
 
 //Definitions
+#define DEVICE_ADRES   8
 #define BUFFER_SIZE 255
 /*#define USART_INTERRUPT_VECTOR USART_RX_vect*/								//Edit this line in when using Atmega168PB
 #ifndef USART_INTERRUPT_VECTOR
@@ -24,6 +25,7 @@
 int8_t globalDriveDirection;		// Value -1, 0 or 1
 int8_t globalTurnDirection;			// Value -1, 0 or 1
 int8_t globalDriveThrottle;			//value between 0 - 100
+
 
 ISR(USART_INTERRUPT_VECTOR) {
 	static char buffer[BUFFER_SIZE];											//Character buffer to store numerals
@@ -126,8 +128,13 @@ int main(void)
 	UBRR0L = 103;								//Baudrate 9600
 	
 	sei();										//Enable interrupt routines
+	init_master(); //enable i2c
+	PORTD |= 0b00000011; //Pullup SDA and SCL
 	
     while (1) 
     {
+	verzenden(8, globalDriveThrottle);
+	verzenden(8, globalDriveDirection);
+	verzenden(8, globalTurnDirection);
     }
 }

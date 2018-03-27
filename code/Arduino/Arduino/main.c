@@ -12,10 +12,11 @@
 #include <math.h>
 #include "i2c_mst.c"
 #include "matthijs_testFunctions.h" /*Contains functions for transmitting over USART for testing purposes*/
+#include "ultrasonicSensor.h"
 
 //Definitions
 #define BUFFER_SIZE 255
-/*#define USART_INTERRUPT_VECTOR USART_RX_vect*/								//Edit this line in when using Atmega168PB
+#define USART_INTERRUPT_VECTOR USART_RX_vect								//Edit this line in when using Atmega168PB
 #ifndef USART_INTERRUPT_VECTOR
 #define USART_INTERRUPT_VECTOR USART0_RX_vect
 #endif
@@ -178,13 +179,25 @@ int main(void){
 	init_I2C();
 	init_rp6Data();
 	init_arduinoData();
+	initTimer();
+	init_USART();
 	//-----------------------
+	int distance = 0;
 	
 	while (1){
 		if(I2CsyncTimer < micros()){
 			rp6DataConstructor();
 			I2CsyncTimer = micros() + syncSpeed;
 		}
+		
+		if (TCNT1 > 125000) {
+			distance = ultrasonicSensor()/10;
+			writeString("Distance: ");
+			writeInt(distance);
+			writeString("\r\n");
+			TCNT1 = 0;
+		}
+		
 	}
 }
 

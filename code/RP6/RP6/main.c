@@ -24,7 +24,7 @@
 uint8_t statLED[2] = {64, 1};
 
 uint64_t I2CsyncTimer = 0;
-uint32_t syncSpeed = 100000;
+uint32_t syncSpeed = 5000000;
 
 //Functions
 void init_interrupt();							//Initialize global interrupts
@@ -82,6 +82,43 @@ struct arduinoDataBP {
 	uint16_t	motorEncoderRVal;		//Same for right encoder ---^
 } arduinoData;
 
+
+////temp usart shit
+#define BAUDRATE		38400
+#define UBRR_BAUD	(((long)F_CPU/((long)16 * BAUDRATE))-1)
+#define resetData()  for(uint8_t i=0;i<20;++i) data[i]=0
+void initUSART() {
+
+	UBRRH = UBRR_BAUD >> 8;
+	UBRRL = (uint8_t) UBRR_BAUD;
+	UCSRA = 0x00;
+	UCSRC = (1<<URSEL)|(1<<UCSZ1)|(1<<UCSZ0);
+	UCSRB = (1 << TXEN) | (1 << RXEN);
+}
+
+
+void writeChar(char ch)
+{
+	while (!(UCSRA & (1<<UDRE)));
+	UDR = (uint8_t)ch;
+}
+
+
+void writeString(char *string)
+{
+	while(*string)
+	writeChar(*string++);
+}
+
+
+void writeInteger(int16_t number, uint8_t base)
+{
+	char buffer[17];
+	itoa(number, &buffer[0], base);
+	writeString(&buffer[0]);
+}
+///------
+
 //Main function
 int main(void) {
 	//Initialize all functions
@@ -95,15 +132,78 @@ int main(void) {
 	
 	init_rp6Data();
 	init_arduinoData();
+	
+	initUSART();
 	//-----------------------
+	writeString("Start!");
+
+	while(1){
+		writeString("Start 2!");
+		_delay_ms(250);
+		writeString("Start 3!");
+		writeInteger(rp6Data.driveSpeed, 10);
+		writeString("Start 4!");
+		writeString("\n");
+		writeInteger(rp6Data.driveDirection, 10);
+		writeString("\n");
+		writeInteger(rp6Data.turnDirection, 10);
+		writeString("\n");
+		writeInteger(rp6Data.accelerationRate, 10);
+		writeString("\n");
+		writeInteger(rp6Data.turnRate, 10);
+		writeString("\n");
+		writeInteger(rp6Data.driveSpeedThreshold, 10);
+		writeString("\n");
+		writeInteger(rp6Data.updateSpeed, 10);
+		writeString("\n");
+		writeInteger(rp6Data.enableBeeper, 10);
+		writeString("\n-------------------------\n");
+	}
+	
+	I2CsyncTimer = micros();
+	int temp = 0;
 	
 	while(1){
-		motorDriver();
+		_delay_ms(1000);
+		writeInteger(rp6Data.driveSpeed, 10);
+		writeString("\n");
+		
+		rp6Data.accelerationRate = 30;
+		rp6Data.turnRate = 3000;
+		rp6Data.driveSpeedThreshold = 5000;
+		rp6Data.updateSpeed = 200000;
+		rp6Data.enableBeeper = 1;
 		
 		if(I2CsyncTimer < micros()){
-			arduinoDataConstructor();
+			//arduinoDataConstructor();
 			I2CsyncTimer = micros() + syncSpeed;
+			
+			temp++;
+			if(temp > 1){temp = 0;}
+				
+			switch(temp){
+				case(0):
+				rp6Data.driveDirection = 1;
+				rp6Data.driveSpeed = 50;
+				rp6Data.turnDirection = 0;
+				writeInteger(temp, 10);
+				writeString("\n");
+				writeInteger(rp6Data.driveSpeed, 10);
+				writeString("\n");
+				break;
+				case(1):
+				rp6Data.driveDirection = 0;
+				rp6Data.driveSpeed = 100;
+				rp6Data.turnDirection = 0;
+				writeInteger(temp, 10);
+				writeString("\n");
+				writeInteger(rp6Data.driveSpeed, 10);
+				writeString("\n");
+				break;
+			}
 		}
+		
+		motorDriver();
 	}
 }
 
@@ -165,10 +265,10 @@ void init_rp6Data(){
 
 
 void I2C_receiveInterpreter(uint8_t I2Cdata[]){
-	int dataSet = I2Cdata[0];
-	switch(dataSet){
-		case(1): rp6DataInterpreter(I2Cdata); break;
-	}
+	//int dataSet = I2Cdata[0];
+	//switch(dataSet){
+	//	case(1): rp6DataInterpreter(I2Cdata); break;
+	//}
 }
 
 
@@ -280,6 +380,16 @@ void enableMotorEncoder(int enable){
 
 
 int motorDriver(){
+	/*
+	localDriveSpeed = rp6Data.driveSpeed;
+	rp6Data.driveDirection;
+	rp6Data.turnDirection;
+	rp6Data.accelerationRate;
+	rp6Data.turnRate;
+	rp6Data.driveSpeedThreshold;
+	rp6Data.updateSpeed;
+	rp6Data.enableBeeper;
+	*/
 	//Motor settings
 	static int		deviationCorrection		= 15;				//Drift correction
 	//-------------

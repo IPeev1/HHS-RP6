@@ -176,6 +176,7 @@ int main(void){
 	init_micros();
 	init_master();
 	init_I2C();
+	init_USART();
 	init_rp6Data();
 	init_arduinoData();
 	//-----------------------

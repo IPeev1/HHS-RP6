@@ -12,10 +12,12 @@
 #include <math.h>
 #include "i2c_mst.c"
 #include "matthijs_testFunctions.h" /*Contains functions for transmitting over USART for testing purposes*/
+#include "ultrasonicSensor.h"
+#include <util/delay.h>
 
 //Definitions
 #define BUFFER_SIZE 255
-/*#define USART_INTERRUPT_VECTOR USART_RX_vect*/								//Edit this line in when using Atmega168PB
+/*#define USART_INTERRUPT_VECTOR USART_RX_vect	*/							//Edit this line in when using Atmega168PB
 #ifndef USART_INTERRUPT_VECTOR
 #define USART_INTERRUPT_VECTOR USART0_RX_vect
 #endif
@@ -23,6 +25,9 @@
 //Global variables
 uint64_t I2CsyncTimer = 0;
 uint32_t syncSpeed = 100000;
+
+uint32_t ultrasonicSensorTimer = 0;
+uint32_t ultrasonicSensorSpeed = 100000;
 
 //Micros function ---------------------------------
 uint64_t micros();								//Keep track of the amount of microseconds passed since boot
@@ -179,6 +184,8 @@ int main(void){
 	init_USART();
 	init_rp6Data();
 	init_arduinoData();
+	initTimer();
+	init_USART();
 	//-----------------------
 	
 	while (1){
@@ -186,6 +193,12 @@ int main(void){
 			rp6DataConstructor();
 			I2CsyncTimer = micros() + syncSpeed;
 		}
+		
+		if (ultrasonicSensorTimer < micros()) {
+			printUltrasonicSensorDistance();
+			ultrasonicSensorTimer = micros() + ultrasonicSensorSpeed;
+		}
+		
 	}
 }
 

@@ -4,13 +4,14 @@
  * Created: 3/13/2018 2:02:25 PM
  * Author : mc_he
  */ 
-#define F_CPU 16000000UL														//Clock speed
+#define F_CPU 16000000															//Clock speed
+#define SCL 100000																//Define the TWI clock frequency
 
 //Libraries
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <stdlib.h>
 #include <math.h>
-#include "i2c_mst.c"
 #include "matthijs_testFunctions.h" /*Contains functions for transmitting over USART for testing purposes*/
 #include "ultrasonicSensor.h"
 #include <util/delay.h>
@@ -23,9 +24,6 @@
 #endif
 
 //Global variables
-uint64_t I2CsyncTimer = 0;
-uint32_t syncSpeed = 100000;
-
 uint32_t ultrasonicSensorTimer = 0;
 uint32_t ultrasonicSensorSpeed = 100000;
 
@@ -35,15 +33,30 @@ ISR(TIMER3_OVF_vect);							//Interrupt for Timer3, for micros()
 void init_micros();								//Configure Timer3
 volatile uint64_t t3TotalOverflow;				//Track the total overflows
 //-------------------------------------------------
-//I2C receive -------------------------------------
+//I2C functions -----------------------------------
+void init_TWI();
+void init_TWI_Timer2();
 void init_arduinoData();
-void I2C_receiveInterpreter(uint8_t I2Cdata[]);
-void arduinoDataInterpreter(uint8_t I2Cdata[]);
-//I2C send ----------------------------------------
 void init_rp6Data();
+ISR(TWI_vect);
+ISR(TIMER2_OVF_vect);
+void I2C_receiveInterpreter();
+void arduinoDataInterpreter();
 void rp6DataConstructor();
-void I2C_sendArray(uint8_t I2Cdata[]);
+void clearSendData();
+void clearReceiveData();
+void TWIWrite(uint8_t u8data);
+uint8_t TWIGetStatus();
+void TWIwaitUntilReady();
+void checkCode(uint8_t code);
+void writeToSlave(uint8_t address, uint8_t dataByte[]);
+void readFromSlave(uint8_t address);
 //-------------------------------------------------
+#define DATASIZE 20										//Define how much data is transferred per transmit (Array length)
+#define RP6_ADDRESS 3									//Define the slave address we are talking to, can currently be only one
+uint8_t sendDataTWI[DATASIZE];							//Create an array for holding the data that needs to be send
+uint8_t receiveDataTWI[DATASIZE];						//Same but for the receive data --^
+
 //Other functions ---------------------------------
 void init_interrupt(){
 	sei();									//Enable global interrupts
@@ -58,11 +71,6 @@ void init_USART(){
 	UCSR0C |= (1 << UCSZ01 | 1 << UCSZ00);		//Asynchronous USART, Parity none, 1 Stop bit, 8-bit character size
 	UBRR0H = 00;
 	UBRR0L = 103;								//Baudrate 9600
-}
-
-
-void init_I2C(){
-	PORTD |= 0b00000011; //Pullup SDA and SCL
 }
 //-------------------------------------------------
 // Global Structs
@@ -179,9 +187,9 @@ int main(void){
 	//Initialize all functions
 	init_interrupt();
 	init_micros();
-	init_master();
-	init_I2C();
 	init_USART();
+	init_TWI();
+	init_TWI_Timer2();
 	init_rp6Data();
 	init_arduinoData();
 	initTimer();
@@ -189,16 +197,10 @@ int main(void){
 	//-----------------------
 	
 	while (1){
-		if(I2CsyncTimer < micros()){
-			rp6DataConstructor();
-			I2CsyncTimer = micros() + syncSpeed;
-		}
-		
 		if (ultrasonicSensorTimer < micros()) {
 			printUltrasonicSensorDistance();
 			ultrasonicSensorTimer = micros() + ultrasonicSensorSpeed;
 		}
-		
 	}
 }
 
@@ -222,27 +224,34 @@ uint64_t micros(){
 	return microsReturnValue;																						//Return the calculated value
 }
 //------------------------------------------------------
-//I2C functions receive --------------------
+//I2C functions ----------------------------------------
+#define TWISendStart()		(TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE))
+#define TWISendStop()		(TWCR = (1<<TWINT)|(1<<TWSTO)|(1<<TWEN)|(1<<TWIE))
+#define TWISendTransmit()	(TWCR = (1<<TWINT)|(1<<TWEN)|(1<<TWIE))
+#define TWISendACK()		(TWCR = (1<<TWINT)|(1<<TWEN)|(1<<TWIE)|(1<<TWEA))
+#define TWISendNACK()		(TWCR = (1<<TWINT)|(1<<TWEN)|(1<<TWIE))
+
+void init_TWI()
+{
+	TWSR = 0;									//No prescaling
+	TWBR = ((F_CPU / SCL) - 16) / 2;			//Set SCL to 100kHz
+	TWCR = (1 << TWEN) | (1 << TWIE);			//Enable TWI and Enable Interrupt
+}
+
+
+void init_TWI_Timer2(){
+	TCCR2B |= (1 << CS20) | (1 << CS21) | (1 << CS22);
+	TIMSK2 |= (1 << TOIE2);
+	TCNT2 = 0;
+}
+
+
 void init_arduinoData(){
 	arduinoData.motorEncoderLVal = 0;
 	arduinoData.motorEncoderRVal = 0;
 }
 
 
-void I2C_receiveInterpreter(uint8_t I2Cdata[]){
-	int dataSet = I2Cdata[0];
-	switch(dataSet){
-		case(1): arduinoDataInterpreter(I2Cdata); break;
-	}
-}
-
-
-void arduinoDataInterpreter(uint8_t I2Cdata[]){
-	arduinoData.motorEncoderLVal = I2Cdata[1] * 30000 / 255;
-	arduinoData.motorEncoderRVal = I2Cdata[2] * 30000 / 255;
-}
-
-//I2C functions send -----------------------
 void init_rp6Data(){
 	rp6Data.driveSpeed = 0;
 	rp6Data.driveDirection = 0;
@@ -255,30 +264,155 @@ void init_rp6Data(){
 }
 
 
-void rp6DataConstructor(){
-	uint8_t I2Cdata[20];
+ISR(TWI_vect){
+	static int bytecounter = 0;
 	
-	I2Cdata[0] = 1;
-	I2Cdata[1] = rp6Data.driveSpeed;
-	I2Cdata[2] = rp6Data.driveDirection + 1;
-	I2Cdata[3] = rp6Data.turnDirection + 1;
-	I2Cdata[4] = rp6Data.accelerationRate;
-	I2Cdata[5] = rp6Data.turnRate * 255 / 8000;
-	I2Cdata[6] = rp6Data.driveSpeedThreshold * 255 / 6000;
-	I2Cdata[7] = rp6Data.updateSpeed / 2000;
-	I2Cdata[8] = rp6Data.enableBeeper;
-	
-	for(int i = 9; i <= 19; i++){
-		I2Cdata[i] = 0;
+	switch(TWSR){
+		case 0x40:
+		clearReceiveData();
+		bytecounter = 0;
+		TWISendACK();
+		break;
+		
+		case 0x50:
+		receiveDataTWI[bytecounter] = TWDR;
+		if(bytecounter < DATASIZE - 2){
+			bytecounter++;
+			TWISendACK();
+			}else{
+			bytecounter++;
+			TWISendNACK();
+		}
+		break;
+		
+		case 0x58:
+		receiveDataTWI[bytecounter] = TWDR;
+		TWISendStop();
+		I2C_receiveInterpreter();
+		break;
 	}
-	
-	I2C_sendArray(I2Cdata);
 }
 
 
-void I2C_sendArray(uint8_t I2Cdata[]){
-	for(int i = 0; i <= 19; i++){
-		verzenden(8, I2Cdata[i]);
+ISR(TIMER2_OVF_vect){
+	static int counter = 0;
+	
+	if(counter == 6){
+		rp6DataConstructor();
+		}else if(counter >= 12){
+		readFromSlave(RP6_ADDRESS);
+		counter = 0;
 	}
+	
+	counter++;
+}
+
+
+void I2C_receiveInterpreter(){
+	int dataSet = receiveDataTWI[0];
+	switch(dataSet){
+		case(1): arduinoDataInterpreter(); break;
+	}
+}
+
+
+void arduinoDataInterpreter(){
+	arduinoData.motorEncoderLVal = receiveDataTWI[1] * 30000 / 255;
+	arduinoData.motorEncoderRVal = receiveDataTWI[2] * 30000 / 255;
+}
+
+
+void rp6DataConstructor(){
+	clearSendData();
+	
+	sendDataTWI[0] = 1;
+	sendDataTWI[1] = rp6Data.driveSpeed;
+	sendDataTWI[2] = rp6Data.driveDirection + 1;
+	sendDataTWI[3] = rp6Data.turnDirection + 1;
+	sendDataTWI[4] = rp6Data.accelerationRate;
+	sendDataTWI[5] = rp6Data.turnRate * 255 / 8000;
+	sendDataTWI[6] = rp6Data.driveSpeedThreshold * 255 / 6000;
+	sendDataTWI[7] = rp6Data.updateSpeed / 2000;
+	sendDataTWI[8] = rp6Data.enableBeeper;
+	
+	for(int i = 9; i < DATASIZE; i++){
+		sendDataTWI[i] = 0;
+	}
+	
+	writeToSlave(RP6_ADDRESS, sendDataTWI);
+}
+
+
+void clearSendData(){
+	for(int i = 0; i < DATASIZE; i++){
+		sendDataTWI[i] = 0;
+	}
+}
+
+
+void clearReceiveData(){
+	for(int i = 0; i < DATASIZE; i++){
+		receiveDataTWI[i] = 0;
+	}
+}
+
+
+void TWIWrite(uint8_t u8data)
+{
+	TWDR = u8data;
+	TWISendTransmit();
+}
+
+
+uint8_t TWIGetStatus(){
+	return (TWSR & 0xF8);
+}
+
+
+void TWIwaitUntilReady(){
+	while (!(TWCR & (1 << TWINT)));
+}
+
+
+void checkCode(uint8_t code){
+	if (TWIGetStatus() != code){
+		char buffer[255];
+		writeString("\n\n\rERROR: Wrong status! Code retrieved: 0x");
+		writeString( itoa( TWIGetStatus(), buffer, 16) );
+		writeString("\n\n\r");
+	}
+}
+
+
+void writeToSlave(uint8_t address, uint8_t dataByte[]){
+	
+	TWISendStart();
+	TWIwaitUntilReady();
+	checkCode(0x08);
+	
+	TWIWrite((address << 1));
+	TWIwaitUntilReady();
+	checkCode(0x18);
+	
+	for(int i = 0; i < DATASIZE; i++){
+		TWIWrite(dataByte[i]);
+		TWIwaitUntilReady();
+		checkCode(0x28);
+	}
+	
+	TWISendStop();
+	
+}
+
+
+void readFromSlave(uint8_t address){
+	
+	TWISendStart();
+	TWIwaitUntilReady();
+	checkCode(0x08);
+	
+	TWIWrite( (address << 1) + 1 );
+	TWIwaitUntilReady();
+	
 }
 //------------------------------------------

@@ -12,9 +12,13 @@
 #include <util/delay.h>
 
 #define speedOfSound 1715
-#define TRIGGER PINB1
-#define ECHO PINB4
 #define MAX_SENSOR_VALUE 30000
+
+#define TRIGGER PINL1
+#define ECHO PINL1
+#define DDR_REGISTER DDRL
+#define PORT_REGISTER PORTL
+#define PIN_REGISTER PINL
 
 void initTimer(){
 	
@@ -24,61 +28,61 @@ void initTimer(){
 
 int ultrasonicSensor() {
 	
-	TCNT1 = 0;
+	TCNT1 = 0; //Reset value of TCNT1
 	
-	unsigned long pulseStartTime = 0;
+	unsigned long pulseStartTime = 0; //Used to record value of TCNT1 when the pulse starts
+	//Values to prevent infinite loops:
 	unsigned long numLoops = 0;
 	unsigned long maxLoops = 16000;
 	
-	DDRB |= (1 << TRIGGER);
+	DDR_REGISTER |= (1 << TRIGGER); //Set TRIGGER pin as output
 	
-	
-	PORTB &= ~(1 << TRIGGER);
+	PORT_REGISTER &= ~(1 << TRIGGER); //Set TRIGGER pin to low for 2 us to ensure a clean pulse
 	_delay_us(2);
-	PORTB |= (1 << TRIGGER);
+	PORT_REGISTER |= (1 << TRIGGER); //Send pulse for 5 us
 	_delay_us(5);
-	PORTB &= ~(1 << TRIGGER);
+	PORT_REGISTER &= ~(1 << TRIGGER); //Set TRIGGER pin to low
 	
-	DDRB &= ~(1 << ECHO);
+	DDR_REGISTER &= ~(1 << ECHO); //Set ECHO pin as input
 
-	while (PINB & (1 << ECHO)) {
+	while (PIN_REGISTER & (1 << ECHO)) { //Wait for any old pulse to end
 		if(numLoops++ == maxLoops) {
 			return MAX_SENSOR_VALUE;
 		}
 	}
 	
-	while (~PINB & (1 << ECHO)) {
+	while (~PIN_REGISTER & (1 << ECHO)) { //Wait until PING))) returns a pulse
 		if(numLoops++ == maxLoops) {
 			return MAX_SENSOR_VALUE;
 		}
 	}
 	
-	pulseStartTime = TCNT1;
+	pulseStartTime = TCNT1; //Set pulseStartTime to current TCNT1 value
 	
-	while (PINB & (1 << ECHO)) {
+	while (PIN_REGISTER & (1 << ECHO)) { //Wait until the pulse from PING))) ends
 		if(numLoops++ == maxLoops) {
 			return MAX_SENSOR_VALUE;
 		}
 	}
-	return cyclesToMm(TCNT1 - pulseStartTime);
+	return cyclesToMm(TCNT1 - pulseStartTime); //Calculate and return distance in mm
 }
 
 int cyclesToMm(unsigned long cycles) {
 	
-	return (cycles * speedOfSound) / 2000;
+	return (cycles * speedOfSound) / 20000;
 }
 
 void printUltrasonicSensorDistance() {
 	int distance = 0;
 	int distanceCm = 0;
-	int distance100thCm = 0;
+	int distance10thCm = 0;
 	
 	distance = ultrasonicSensor();
-	distanceCm = distance / 100;
-	distance100thCm = distance - (distanceCm * 100);
+	distanceCm = distance / 10;
+	distance10thCm = distance - (distanceCm * 10);
 	writeString("Distance: ");
 	writeInt(distanceCm);
 	writeChar('.');
-	writeInt(distance100thCm);
+	writeInt(distance10thCm);
 	writeString("\r\n");
 }

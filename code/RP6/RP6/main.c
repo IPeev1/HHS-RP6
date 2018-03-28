@@ -10,44 +10,38 @@
  */ 
 //Defines
 #define F_CPU 8000000
-#define TRUE 0xFF;
-#define FALSE 0;
+#define SCL 100000
 
 //Includes
+#include <stdlib.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <math.h>
 #include <util/delay.h>
-#include "i2c.c"
 
 //Global variables
 uint8_t statLED[2] = {64, 1};
-
-uint64_t I2CsyncTimer = 0;
-uint32_t syncSpeed = 100000;
 
 //Functions
 void init_interrupt();							//Initialize global interrupts
 void init_LED();								//Initialize the status LEDs
 
 //I2C functions ------------------
-ISR(TWI_vect){
-	slaaftwi();
-}
-uint8_t data_ont[20];
-volatile uint8_t data_flag = FALSE;
-volatile uint8_t databyte = 0x33;
-
-void ontvangData(uint8_t [],uint8_t);
-uint8_t verzendByte();
-//I2C receive
+void init_TWI();
 void init_rp6Data();
-void I2C_receiveInterpreter(uint8_t I2Cdata[]);
-void rp6DataInterpreter(uint8_t I2Cdata[]);
-//I2C send
 void init_arduinoData();
+ISR(TWI_vect);
+void clearSendData();
+void clearReceiveData();
+void I2C_receiveInterpreter();
+void rp6DataInterpreter();
 void arduinoDataConstructor();
-void I2C_sendArray(uint8_t I2Cdata[]);
+
+//I2C Variables
+#define DATASIZE 20
+#define RP6_ADDRESS 3
+uint8_t sendData[DATASIZE];
+uint8_t receiveData[DATASIZE];
 //----------------------------------------------------
 //Micros function ------------------------------------
 uint64_t micros();								//Keep track of the amount of microseconds passed since boot
@@ -91,32 +85,17 @@ int main(void) {
 	init_motor();
 	init_LED();
 	
-	init_i2c_slave(8);
-	
 	init_rp6Data();
 	init_arduinoData();
-	//-----------------------
+	
+	init_TWI();
+	
+	clearSendData();
+	clearReceiveData();
 	
 	while(1){
 		motorDriver();
-		
-		if(I2CsyncTimer < micros()){
-			arduinoDataConstructor();
-			I2CsyncTimer = micros() + syncSpeed;
-		}
 	}
-}
-
-//I2C control functions
-void ontvangData(uint8_t data[],uint8_t tel){
-	for(int i=0;i<tel;++i)
-	data_ont[i]=data[i];
-	I2C_receiveInterpreter(data_ont);
-}
-
-
-uint8_t verzendByte() {
-	return databyte++;
 }
 
 //Other functions
@@ -151,7 +130,17 @@ uint64_t micros(){
 	return microsReturnValue;																						//Return the calculated value
 }
 //------------------------------------------------------
-//I2C functions receive --------------------------------
+//I2C functions ----------------------------------------
+void init_TWI(){
+	TWCR = (1 << TWEN) | (1 << TWEA) | (1 << TWIE);		//Enable TWI; Enable Acknowledge; Enable Interrupt
+	TWSR = 0;											//No prescaling
+	TWAR = (RP6_ADDRESS << 1);									//Set slave address
+	TWBR = ((F_CPU / SCL) - 16) / 2;					//set SCL to 100kHz
+	DDRC |= 0b00000011;
+	PORTC |= 0b00000011;
+}
+
+
 void init_rp6Data(){
 	rp6Data.driveSpeed = 0;
 	rp6Data.driveDirection = 1;
@@ -164,60 +153,100 @@ void init_rp6Data(){
 }
 
 
-void I2C_receiveInterpreter(uint8_t I2Cdata[]){
-	int dataSet = I2Cdata[0];
-	switch(dataSet){
-		case(1): rp6DataInterpreter(I2Cdata); break;
-	}
-}
-
-
-void rp6DataInterpreter(uint8_t I2Cdata[]){
-	if(I2Cdata[2]-1 == 0){
-		rp6Data.driveSpeed = 0;
-	}else{
-		rp6Data.driveSpeed = I2Cdata[1];
-	}
-	
-	if(I2Cdata[2] < 1){
-		rp6Data.driveDirection = 0;
-	}else{
-		rp6Data.driveDirection = 1;
-	}
-	
-	rp6Data.turnDirection = I2Cdata[3]-1;
-	rp6Data.accelerationRate = I2Cdata[4];
-	rp6Data.turnRate = I2Cdata[5] * 8000 / 255;
-	rp6Data.driveSpeedThreshold = I2Cdata[6] * 6000 / 255;
-	rp6Data.updateSpeed = I2Cdata[7] * 2000;
-	rp6Data.enableBeeper = I2Cdata[8];
-}
-
-//I2C functions send -----------------------------------
 void init_arduinoData(){
 	arduinoData.motorEncoderLVal = 0;
 	arduinoData.motorEncoderRVal = 0;
 }
 
 
-void arduinoDataConstructor(){
-	uint8_t I2Cdata[20];
-	
-	I2Cdata[0] = 1;
-	I2Cdata[1] = arduinoData.motorEncoderLVal * 255 / 30000;
-	I2Cdata[2] = arduinoData.motorEncoderRVal * 255 / 30000;
-	
-	for(int i = 3; i <= 19; i++){
-		I2Cdata[i] = 0;
+ISR(TWI_vect){
+	static int byteCounter = 0;
+	switch(TWSR){
+		case 0x60:
+			clearReceiveData();
+			byteCounter = 0;
+		break;
+		
+		case 0x80:
+			if(byteCounter < 20){
+				receiveData[byteCounter] = TWDR;
+				byteCounter++;
+			}
+		break;
+		
+		case 0xA0:
+			I2C_receiveInterpreter();
+		break;
+		
+		case 0xA8:
+			arduinoDataConstructor();
+			byteCounter = 0;
+			TWDR = sendData[byteCounter];
+		break;
+		
+		case 0xB8:
+			byteCounter++;
+			TWDR = sendData[byteCounter];
+		break;
 	}
 	
-	I2C_sendArray(I2Cdata);
+	TWCR |= (1 << TWINT);
 }
 
 
-void I2C_sendArray(uint8_t I2Cdata[]){
-	for(int i = 0; i <= 19; i++){
-		//verzenden(8, I2Cdata[i]);
+void clearSendData(){
+	for(int i = 0; i < DATASIZE; i++){
+		sendData[i] = 0;
+	}
+}
+
+
+void clearReceiveData(){
+	for(int i = 0; i < DATASIZE; i++){
+		receiveData[i] = 0;
+	}
+}
+
+
+void I2C_receiveInterpreter(){
+	int dataSet = receiveData[0];
+	switch(dataSet){
+		case(1): rp6DataInterpreter(); break;
+	}
+}
+
+
+void rp6DataInterpreter(){
+	if(receiveData[2]-1 == 0){
+		rp6Data.driveSpeed = 0;
+	}else{
+		rp6Data.driveSpeed = receiveData[1];
+	}
+	
+	if(receiveData[2] < 1){
+		rp6Data.driveDirection = 0;
+	}else{
+		rp6Data.driveDirection = 1;
+	}
+	
+	rp6Data.turnDirection = receiveData[3]-1;
+	rp6Data.accelerationRate = receiveData[4];
+	rp6Data.turnRate = receiveData[5] * 8000 / 255;
+	rp6Data.driveSpeedThreshold = receiveData[6] * 6000 / 255;
+	rp6Data.updateSpeed = receiveData[7] * 2000;
+	rp6Data.enableBeeper = receiveData[8];
+}
+
+
+void arduinoDataConstructor(){
+	clearSendData();
+	
+	sendData[0] = 1;
+	sendData[1] = arduinoData.motorEncoderLVal * 255 / 30000;
+	sendData[2] = arduinoData.motorEncoderRVal * 255 / 30000;
+	
+	for(int i = 3; i < DATASIZE; i++){
+		sendData[i] = 0;
 	}
 }
 //------------------------------------------------------
@@ -280,6 +309,16 @@ void enableMotorEncoder(int enable){
 
 
 int motorDriver(){
+	/*
+	localDriveSpeed = rp6Data.driveSpeed;
+	rp6Data.driveDirection;
+	rp6Data.turnDirection;
+	rp6Data.accelerationRate;
+	rp6Data.turnRate;
+	rp6Data.driveSpeedThreshold;
+	rp6Data.updateSpeed;
+	rp6Data.enableBeeper;
+	*/
 	//Motor settings
 	static int		deviationCorrection		= 15;				//Drift correction
 	//-------------

@@ -11,8 +11,8 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
-#define speedOfSound 1715
-#define MAX_SENSOR_VALUE 30000
+#define SPEED_OF_SOUND 1715
+#define CORRECTION 5;
 
 #define TRIGGER PINL1
 #define ECHO PINL1
@@ -33,7 +33,7 @@ int ultrasonicSensor() {
 	unsigned long pulseStartTime = 0; //Used to record value of TCNT1 when the pulse starts
 	//Values to prevent infinite loops:
 	unsigned long numLoops = 0;
-	unsigned long maxLoops = 16000;
+	unsigned long maxLoops = 40000;
 	
 	DDR_REGISTER |= (1 << TRIGGER); //Set TRIGGER pin as output
 	
@@ -47,13 +47,13 @@ int ultrasonicSensor() {
 
 	while (PIN_REGISTER & (1 << ECHO)) { //Wait for any old pulse to end
 		if(numLoops++ == maxLoops) {
-			return MAX_SENSOR_VALUE;
+			return 0;
 		}
 	}
 	
 	while (~PIN_REGISTER & (1 << ECHO)) { //Wait until PING))) returns a pulse
 		if(numLoops++ == maxLoops) {
-			return MAX_SENSOR_VALUE;
+			return 0;
 		}
 	}
 	
@@ -61,7 +61,7 @@ int ultrasonicSensor() {
 	
 	while (PIN_REGISTER & (1 << ECHO)) { //Wait until the pulse from PING))) ends
 		if(numLoops++ == maxLoops) {
-			return MAX_SENSOR_VALUE;
+			return 0;
 		}
 	}
 	return cyclesToMm(TCNT1 - pulseStartTime); //Calculate and return distance in mm
@@ -69,7 +69,7 @@ int ultrasonicSensor() {
 
 int cyclesToMm(unsigned long cycles) {
 	
-	return (cycles * speedOfSound) / 20000;
+	return ((cycles * SPEED_OF_SOUND) / 20000) - CORRECTION;
 }
 
 void printUltrasonicSensorDistance() {

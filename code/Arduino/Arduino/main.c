@@ -25,7 +25,9 @@
 
 //Global variables
 uint32_t ultrasonicSensorTimer = 0;
-uint32_t ultrasonicSensorSpeed = 100000;
+uint32_t ultrasonicSensorSpeed = 250000;
+uint32_t stoptimer = 0;
+uint32_t stoptimerspeed = 100000;
 
 //Micros function ---------------------------------
 uint64_t micros();								//Keep track of the amount of microseconds passed since boot
@@ -75,10 +77,10 @@ void init_USART(){
 //-------------------------------------------------
 // Global Structs
 struct rp6DataBP {
-	int8_t		driveSpeed;				//value between 0 - 100
+	int64_t		driveSpeed;				//value between 0 - 100
 	int8_t		driveDirection;			//Value 0 or 1
 	int8_t		turnDirection;			//Value -1, 0 or 1
-	uint8_t		accelerationRate;		//Percentage to accelerate with					(Default: 30)
+	uint16_t	accelerationRate;		//Percentage to accelerate with					(Default: 30)
 	uint16_t	turnRate;				//Intensity to turn with						(Default: 3000)
 	uint16_t	driveSpeedThreshold;	//Minimal power needed to actually start moving	(Default: 5000)
 	uint32_t	updateSpeed;			//Interval time between updates					(Default: 200000)
@@ -177,7 +179,7 @@ ISR(USART_INTERRUPT_VECTOR) {
 			command = 0;														//Reset command
 			bufferPos = -1;													//Reset buffer position
 			
-			globalVariablesTransmitUSART(rp6Data.driveDirection, rp6Data.turnDirection, rp6Data.driveSpeed);
+			//globalVariablesTransmitUSART(rp6Data.driveDirection, rp6Data.turnDirection, rp6Data.driveSpeed);
 		}
 	}
 }
@@ -198,9 +200,39 @@ int main(void){
 	
 	while (1){
 		if (ultrasonicSensorTimer < micros()) {
-			printUltrasonicSensorDistance();
+			//printUltrasonicSensorDistance();
+			writeString("\f\r");
+			writeString("Distance to object: ");
+			writeInt(ultrasonicSensor());
+			writeString("mm\n\n\rSpeed: ");
+			writeInt(rp6Data.driveSpeed);
+			writeString("%\n\rDirection: ");
+			if(rp6Data.driveDirection == 1) writeString("Forward, ");
+			else if(rp6Data.driveDirection == 0) writeString("Stationary, ");
+			else if(rp6Data.driveDirection == -1) writeString("Backwards, ");
+			if(rp6Data.turnDirection == -1) writeString("turning left");
+			else if(rp6Data.turnDirection == 0) writeString("going straight");
+			else if(rp6Data.turnDirection == 1) writeString("turning right");
+			
 			ultrasonicSensorTimer = micros() + ultrasonicSensorSpeed;
 		}
+		
+		if(stoptimer < micros()){
+			uint16_t distance = ultrasonicSensor();
+			
+			if(rp6Data.driveSpeed <= 60 && rp6Data.driveDirection == 1){
+				if(distance < 180){
+					rp6Data.driveSpeed = 0;
+				}
+			}else{
+				if(distance < 280 && rp6Data.driveDirection == 1){
+					rp6Data.driveSpeed = 0;
+				}
+			}
+			
+			stoptimer = micros() + stoptimerspeed;
+		}
+		
 	}
 }
 
@@ -256,9 +288,9 @@ void init_rp6Data(){
 	rp6Data.driveSpeed = 0;
 	rp6Data.driveDirection = 0;
 	rp6Data.turnDirection = 0;
-	rp6Data.accelerationRate = 30;
-	rp6Data.turnRate = 3000;
-	rp6Data.driveSpeedThreshold = 5000;
+	rp6Data.accelerationRate = 3;
+	rp6Data.turnRate = 2500;
+	rp6Data.driveSpeedThreshold = 6000;
 	rp6Data.updateSpeed = 200000;
 	rp6Data.enableBeeper = 1;
 }
@@ -329,7 +361,7 @@ void rp6DataConstructor(){
 	sendDataTWI[1] = rp6Data.driveSpeed;
 	sendDataTWI[2] = rp6Data.driveDirection + 1;
 	sendDataTWI[3] = rp6Data.turnDirection + 1;
-	sendDataTWI[4] = rp6Data.accelerationRate;
+	sendDataTWI[4] = rp6Data.accelerationRate * 255 / 2000;
 	sendDataTWI[5] = rp6Data.turnRate * 255 / 8000;
 	sendDataTWI[6] = rp6Data.driveSpeedThreshold * 255 / 6000;
 	sendDataTWI[7] = rp6Data.updateSpeed / 2000;

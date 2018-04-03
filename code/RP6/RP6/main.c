@@ -27,7 +27,7 @@ uint8_t statLED[2] = {64, 1};
 
 //Global structs
 struct rp6DataBP {
-	uint16_t	driveSpeed;				//value between 0 - 100
+	uint32_t	driveSpeed;				//value between 0 - 100
 	int8_t		driveDirection;			//Value 0 or 1
 	int8_t		turnDirection;			//Value -1, 0 or 1
 	uint16_t	accelerationRate;		//Percentage to accelerate with					(Default: 30)
@@ -152,7 +152,7 @@ void init_rp6Data(){
 	rp6Data.driveSpeed = 0;
 	rp6Data.driveDirection = 1;
 	rp6Data.turnDirection = 0;
-	rp6Data.accelerationRate = 2;
+	rp6Data.accelerationRate = 2000;
 	rp6Data.turnRate = 2500;
 	rp6Data.driveSpeedThreshold = 7000;
 	rp6Data.updateSpeed = 200;
@@ -308,11 +308,13 @@ void init_motor_encoder(){
 
 ISR(INT0_vect){
 	arduinoData.motorEncoderLVal++;							//Increase the encoder variable
+	_delay_ms(30000);
 }
 
 
 ISR(INT1_vect){
 	arduinoData.motorEncoderRVal++;							//Increase the encoder variable
+	_delay_ms(30000);
 }
 
 
@@ -360,20 +362,18 @@ int motorDriver(struct rp6DataBP rp6Data){
 	static uint32_t rightMotorSpeed = 0;
 	//-------------------------
 	
-	rp6Data.updateSpeed = rp6Data.updateSpeed * 1000;
-	
 	//Update timer
 	if(updateTimer > micros()){														//Only execute motor update code if the timer has passed
 		return 0;
 	}else{
-		updateTimer = micros() + rp6Data.updateSpeed;											//If the timer has passed, set new timer and execute the code
+		updateTimer = micros() + 200000;//rp6Data.updateSpeed;											//If the timer has passed, set new timer and execute the code
 	}
 	
+	//rp6Data.driveSpeed = 100;
 	
 	//Remap drive speed percentage
 	rp6Data.driveSpeed = (rp6Data.driveSpeed * 25600) / 100;										//The given drive speed is a percentage, remap it to a PWM compare value (Max 25600)
 	if(rp6Data.driveSpeed < rp6Data.driveSpeedThreshold){rp6Data.driveSpeed = 0;}								//If the speed is less than the threshold, the speed is set to 0 because the power is to low to drive --------- EDIT SUGGESTION: Rescale so that 1% gives the minimal amount of actual movement and 100% the max. Threshold and less doesn't participate ~Sander
-	
 	
 	//Check and change drive direction
 	if(rp6Data.driveDirection != currentDriveDirection && currentDriveSpeed != 0){			//If the drive direction differs from what we are currently driving and we are not standing still
@@ -394,15 +394,17 @@ int motorDriver(struct rp6DataBP rp6Data){
 			if(currentDriveSpeed < rp6Data.driveSpeedThreshold){									//If the speed is less than the threshold
 				currentDriveSpeed = rp6Data.driveSpeed;													//Set the speed to the requested value (Probably 0)
 			}else{																			//If the current speed is higher than 5000
-				if(rp6Data.accelerationRate > 1500){rp6Data.accelerationRate = 1500;}
-				currentDriveSpeed -= rp6Data.accelerationRate;				//Decelerate with a given percentage of the current speed, determined by accelerationRate
+				if(rp6Data.accelerationRate > rp6Data.driveSpeedThreshold){rp6Data.accelerationRate = rp6Data.driveSpeedThreshold - 300;}
+				if(currentDriveSpeed < 7000){currentDriveSpeed -= rp6Data.accelerationRate/2;}
+				else{currentDriveSpeed -= rp6Data.accelerationRate;}							//Decelerate with a given percentage of the current speed, determined by accelerationRate
 			}
 		}else{																			//If we need to accelerate
 			if(currentDriveSpeed < rp6Data.driveSpeedThreshold){									//And we are still at a speed lower than the threshold
 				currentDriveSpeed += rp6Data.driveSpeedThreshold;										//Speed up with the minimum threshold
 			}else{																			//If we are at a speed higher than the threshold
-				if(rp6Data.accelerationRate > 1500){rp6Data.accelerationRate = 1500;}
-				currentDriveSpeed += rp6Data.accelerationRate;				//Accelerate with a percentage of the current speed, determined by accelerationRate
+			if(rp6Data.accelerationRate > rp6Data.driveSpeedThreshold){rp6Data.accelerationRate = rp6Data.driveSpeedThreshold - 300;}
+				if(currentDriveSpeed < 7000){currentDriveSpeed += rp6Data.accelerationRate/4;}
+				else{currentDriveSpeed += rp6Data.accelerationRate;}							//Accelerate with a percentage of the current speed, determined by accelerationRate
 				if(currentDriveSpeed > rp6Data.driveSpeed){currentDriveSpeed = rp6Data.driveSpeed;}				//If we overshot the requested speed, set the current speed to the requested value (Can't be much of a difference)
 			}
 		}
@@ -422,7 +424,7 @@ int motorDriver(struct rp6DataBP rp6Data){
 		rightMotorSpeed = currentDriveSpeed;							//---^
 		currentTurnDirection = rp6Data.turnDirection;							//Set the new turn direction
 		if(currentTurnDirection == 0){									//If the new direction is 0(straight)
-			enableMotorEncoder(1);											//Enable the encoders
+			enableMotorEncoder(0);											//Enable the encoders
 		}else{															//If the new direction is not straight
 			enableMotorEncoder(0);											//Disable the encoders
 		}
@@ -431,11 +433,23 @@ int motorDriver(struct rp6DataBP rp6Data){
 		if(currentDriveSpeed == 0){										//If the speed is 0, we need to turn around our axle
 			leftMotorDirection = 0;											//Turn the left motor backwards
 			rightMotorDirection = 1;										//Turn the right motor forwards
-			leftMotorSpeed = rp6Data.driveSpeedThreshold + rp6Data.turnRate*2;				//Set the speed to minimal + twice the turn rate
-			rightMotorSpeed = rp6Data.driveSpeedThreshold + rp6Data.turnRate*2;				//---^
+			leftMotorSpeed = rp6Data.driveSpeedThreshold + 2000 + rp6Data.turnRate*2;				//Set the speed to minimal + twice the turn rate
+			rightMotorSpeed = rp6Data.driveSpeedThreshold + 2000 + rp6Data.turnRate*2;				//---^
 		}else{															//If we are driving (Forward or backwards does not matter)
-			leftMotorSpeed = rp6Data.driveSpeedThreshold;							//Set the left motor to minimal
-			rightMotorSpeed += rp6Data.turnRate;									//Increase the right motor with the turn rate
+			//leftMotorSpeed -= rp6Data.turnRate*3;							//Set the left motor to minimal
+			//rightMotorSpeed += rp6Data.turnRate*3;									//Increase the right motor with the turn rate
+			
+			leftMotorSpeed -= ((leftMotorSpeed * 60) / 100);
+			rightMotorSpeed += ((rightMotorSpeed * 60) / 100);
+			
+			if(leftMotorSpeed < rp6Data.driveSpeedThreshold+1000){
+				rightMotorSpeed += ((rp6Data.driveSpeedThreshold+1000) - leftMotorSpeed);
+				leftMotorSpeed = (rp6Data.driveSpeedThreshold + 1000);
+			}							//Set right motor to minimal
+			if(rightMotorSpeed > 25600){
+				leftMotorSpeed -= 5000;
+				rightMotorSpeed = 25600;
+			}
 		}
 	}else if(currentTurnDirection == 0){							//Encoder crap
 		if(arduinoData.motorEncoderLVal != arduinoData.motorEncoderRVal){
@@ -449,11 +463,23 @@ int motorDriver(struct rp6DataBP rp6Data){
 		if(currentDriveSpeed == 0){										//If we stand still, we turn around our axle
 			leftMotorDirection = 1;											//Left motor forward
 			rightMotorDirection = 0;										//Right motor backward
-			leftMotorSpeed = rp6Data.driveSpeedThreshold + rp6Data.turnRate*2;				//set motor speed to minimal + twice the turn rate
-			rightMotorSpeed = rp6Data.driveSpeedThreshold + rp6Data.turnRate*2;				//---^
+			leftMotorSpeed = rp6Data.driveSpeedThreshold + 2000 + rp6Data.turnRate*2;				//set motor speed to minimal + twice the turn rate
+			rightMotorSpeed = rp6Data.driveSpeedThreshold + 2000 + rp6Data.turnRate*2;				//---^
 			}else{														//If we are driving (Forward or backwards does not matter)
-			leftMotorSpeed += rp6Data.turnRate;										//Increase the left motor with the set turn rate
-			rightMotorSpeed = rp6Data.driveSpeedThreshold;							//Set right motor to minimal
+			//leftMotorSpeed += rp6Data.turnRate*3;										//Increase the left motor with the set turn rate
+			//rightMotorSpeed -= rp6Data.turnRate*3;
+			
+			leftMotorSpeed += ((leftMotorSpeed * 60) / 100);
+			rightMotorSpeed -= ((rightMotorSpeed * 60) / 100);
+			
+			if(leftMotorSpeed > 25600){
+				rightMotorSpeed -= 5000;
+				leftMotorSpeed = 25600;
+			}
+			if(rightMotorSpeed < rp6Data.driveSpeedThreshold+1000){
+				leftMotorSpeed += ((rp6Data.driveSpeedThreshold+1000) - rightMotorSpeed);
+				rightMotorSpeed = (rp6Data.driveSpeedThreshold + 1000);
+			}							//Set right motor to minimal
 		}
 	}
 	
@@ -461,6 +487,7 @@ int motorDriver(struct rp6DataBP rp6Data){
 	//Deviation correction
 	rightMotorSpeed += (rightMotorSpeed * deviationCorrection) / 100;		//Set a deviation correction on the right motor
 	
+	leftMotorSpeed += 750;
 	
 	//Final safety check
 	if(leftMotorSpeed > 25600){						//Check if we did not accidentally set a speed higher than allowed on the left motor

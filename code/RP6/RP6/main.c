@@ -12,12 +12,15 @@
 #define F_CPU 8000000
 #define SCL 100000
 
+#define BUMPED_TIME 100000
+
 //Includes
 #include <stdlib.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <math.h>
 #include <util/delay.h>
+#include "bumpers.h"
 
 //Global variables
 uint8_t statLED[2] = {64, 1};
@@ -488,3 +491,26 @@ int motorDriver(struct rp6DataBP rp6Data){
 	return 0;
 }
 //------------------------------------------------------
+
+void bumperCheck() {
+	
+	static uint32_t bumperTimer = 0;
+	static int enable = 0;
+	
+	if (getBumpers()) {
+		enable = 1;
+		bumperTimer = micros();
+	}
+		
+	if (enable) {
+		rp6Data.driveDirection = -1;
+		rp6Data.turnDirection = 0;
+		rp6Data.driveSpeed = 25;
+	}
+	
+	if (micros() > bumperTimer + BUMPED_TIME) {
+		rp6Data.driveSpeed = 0;
+		enable = 0;
+	}
+		
+}

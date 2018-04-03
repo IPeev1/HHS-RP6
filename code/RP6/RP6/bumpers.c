@@ -52,17 +52,3 @@ int getBumpers() {
 	
 	return getBumperLeft() || getBumperRight();
 }
-
-void bumperCheck() {
-	
-	if (getBumpers()) {
-		long distance = DISTANCE;
-	
-		while (DISTANCE > distance - 5) {
-		
-			//drive backwards
-		}
-	
-		//throttle = 0
-	}
-}

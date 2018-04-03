@@ -77,7 +77,7 @@ void init_USART(){
 //-------------------------------------------------
 // Global Structs
 struct rp6DataBP {
-	int64_t		driveSpeed;				//value between 0 - 100
+	uint16_t	driveSpeed;				//value between 0 - 100
 	int8_t		driveDirection;			//Value 0 or 1
 	int8_t		turnDirection;			//Value -1, 0 or 1
 	uint16_t	accelerationRate;		//Percentage to accelerate with					(Default: 30)
@@ -85,12 +85,16 @@ struct rp6DataBP {
 	uint16_t	driveSpeedThreshold;	//Minimal power needed to actually start moving	(Default: 5000)
 	uint32_t	updateSpeed;			//Interval time between updates					(Default: 200000)
 	uint8_t		enableBeeper;			//Set to 1 to enable reverse driving beeper		(Default: 1	(On))
+	uint16_t	compassAngle;			//Degrees from north given by compass
 } rp6Data;
 
 
 struct arduinoDataBP {
 	uint16_t	motorEncoderLVal;		//Segment count of the left motor encoder		(Updated by interrupt)
 	uint16_t	motorEncoderRVal;		//Same for right encoder ---^
+	uint16_t	distanceDrivenL;		//Distance driven by left motor
+	uint16_t	distanceDrivenR;		//right motor ---^
+	uint16_t	totalDistance;			//Total distance driven by the robot
 } arduinoData;
 
 
@@ -291,7 +295,7 @@ void init_rp6Data(){
 	rp6Data.accelerationRate = 3;
 	rp6Data.turnRate = 2500;
 	rp6Data.driveSpeedThreshold = 6000;
-	rp6Data.updateSpeed = 200000;
+	rp6Data.updateSpeed = 200;
 	rp6Data.enableBeeper = 1;
 }
 
@@ -349,8 +353,11 @@ void I2C_receiveInterpreter(){
 
 
 void arduinoDataInterpreter(){
-	arduinoData.motorEncoderLVal = receiveDataTWI[1] * 30000 / 255;
-	arduinoData.motorEncoderRVal = receiveDataTWI[2] * 30000 / 255;
+	arduinoData.motorEncoderLVal = (receiveDataTWI[1] << 8) + receiveDataTWI[2];
+	arduinoData.motorEncoderRVal = (receiveDataTWI[3] << 8) + receiveDataTWI[4];
+	arduinoData.distanceDrivenL = (receiveDataTWI[5] << 8) + receiveDataTWI[6];
+	arduinoData.distanceDrivenR = (receiveDataTWI[7] << 8) + receiveDataTWI[8];
+	arduinoData.totalDistance = (receiveDataTWI[9] << 8) + receiveDataTWI[10];
 }
 
 
@@ -358,16 +365,29 @@ void rp6DataConstructor(){
 	clearSendData();
 	
 	sendDataTWI[0] = 1;
+	if(rp6Data.driveSpeed > 100){rp6Data.driveSpeed = 100;}
 	sendDataTWI[1] = rp6Data.driveSpeed;
 	sendDataTWI[2] = rp6Data.driveDirection + 1;
 	sendDataTWI[3] = rp6Data.turnDirection + 1;
-	sendDataTWI[4] = rp6Data.accelerationRate * 255 / 2000;
-	sendDataTWI[5] = rp6Data.turnRate * 255 / 8000;
-	sendDataTWI[6] = rp6Data.driveSpeedThreshold * 255 / 6000;
-	sendDataTWI[7] = rp6Data.updateSpeed / 2000;
-	sendDataTWI[8] = rp6Data.enableBeeper;
 	
-	for(int i = 9; i < DATASIZE; i++){
+	sendDataTWI[4] = (rp6Data.accelerationRate >> 8);
+	sendDataTWI[5] = rp6Data.accelerationRate;
+	
+	sendDataTWI[6] = (rp6Data.turnRate >> 8);
+	sendDataTWI[7] = rp6Data.turnRate;
+	
+	sendDataTWI[8] = (rp6Data.driveSpeedThreshold >> 8);
+	sendDataTWI[9] = rp6Data.driveSpeedThreshold;
+	
+	sendDataTWI[10] = (rp6Data.updateSpeed >> 8);
+	sendDataTWI[11] = rp6Data.updateSpeed;
+	
+	sendDataTWI[12] = rp6Data.enableBeeper;
+	
+	sendDataTWI[13] = (rp6Data.compassAngle >> 8);
+	sendDataTWI[14] = rp6Data.compassAngle;
+	
+	for(int i = 15; i < DATASIZE; i++){
 		sendDataTWI[i] = 0;
 	}
 	

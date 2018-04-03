@@ -61,6 +61,7 @@ void clearReceiveData();
 void I2C_receiveInterpreter();
 void rp6DataInterpreter();
 void arduinoDataConstructor();
+void bumperCheck();
 
 //I2C Variables
 #define DATASIZE 20
@@ -101,6 +102,7 @@ int main(void) {
 	clearReceiveData();
 	
 	while(1){
+		bumperCheck();
 		motorDriver(rp6Data);
 	}
 }
@@ -521,10 +523,10 @@ int motorDriver(struct rp6DataBP rp6Data){
 
 void bumperCheck() {
 	
-	static uint32_t bumperTimer = 0;
-	static int enable = 0;
+	static uint32_t bumperTimer = 0; //Used to determine how long the RP6 drives backwards
+	static uint8_t enable = 0; //if 1, RP6 drives backwards
 	
-	if (getBumpers()) {
+	if (getBumpers()) { //If one or both bumpers are pushed
 		enable = 1;
 		bumperTimer = micros();
 	}
@@ -532,12 +534,12 @@ void bumperCheck() {
 	if (enable) {
 		rp6Data.driveDirection = -1;
 		rp6Data.turnDirection = 0;
-		rp6Data.driveSpeed = 25;
-	}
-	
-	if (micros() > bumperTimer + BUMPED_TIME) {
-		rp6Data.driveSpeed = 0;
-		enable = 0;
+		rp6Data.driveSpeed = 30;
+		
+		if (micros() > bumperTimer + BUMPED_TIME) {
+			rp6Data.driveSpeed = 0;
+			enable = 0;
+		}
 	}
 		
 }

@@ -300,7 +300,7 @@ void init_rp6Data(){
 	rp6Data.turnDirection = 0;
 	rp6Data.accelerationRate = 2000;
 	rp6Data.turnRate = 2500;
-	rp6Data.driveSpeedThreshold = 7000;
+	rp6Data.driveSpeedThreshold = 4000;
 	rp6Data.updateSpeed = 200;
 	rp6Data.enableBeeper = 1;
 }

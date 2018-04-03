@@ -28,6 +28,7 @@ uint32_t ultrasonicSensorTimer = 0;
 uint32_t ultrasonicSensorSpeed = 250000;
 uint32_t stoptimer = 0;
 uint32_t stoptimerspeed = 100000;
+int compassFlag = 0;
 
 //Micros function ---------------------------------
 uint64_t micros();								//Keep track of the amount of microseconds passed since boot
@@ -53,6 +54,7 @@ void TWIwaitUntilReady();
 void checkCode(uint8_t code);
 void writeToSlave(uint8_t address, uint8_t dataByte[]);
 void readFromSlave(uint8_t address);
+void readFromCompass();
 //-------------------------------------------------
 #define DATASIZE 20										//Define how much data is transferred per transmit (Array length)
 #define RP6_ADDRESS 3									//Define the slave address we are talking to, can currently be only one
@@ -222,7 +224,8 @@ int main(void){
 			else if(rp6Data.driveDirection == -1) writeString("Backwards, ");
 			if(rp6Data.turnDirection == -1) writeString("turning left");
 			else if(rp6Data.turnDirection == 0) writeString("going straight");
-			else if(rp6Data.turnDirection == 1) writeString("turning right");
+			else if(rp6Data.turnDirection == 1) writeString("turning right\n\r");
+			writeInt(rp6Data.compassAngle);
 			
 			ultrasonicSensorTimer = micros() + ultrasonicSensorSpeed;
 		}
@@ -317,13 +320,19 @@ ISR(TWI_vect){
 		break;
 		
 		case 0x50:
-		receiveDataTWI[bytecounter] = TWDR;
-		if(bytecounter < DATASIZE - 2){
-			bytecounter++;
-			TWISendACK();
-			}else{
-			bytecounter++;
-			TWISendNACK();
+		if(!compassFlag){
+			receiveDataTWI[bytecounter] = TWDR;
+			if(bytecounter < DATASIZE - 2){
+				bytecounter++;
+				TWISendACK();
+				}else{
+				bytecounter++;
+				TWISendNACK();
+			}
+		}else{
+			rp6Data.compassAngle = ((TWDR * 360) / 255);
+			TWISendStop();
+			compassFlag = 0;
 		}
 		break;
 		
@@ -339,9 +348,11 @@ ISR(TWI_vect){
 ISR(TIMER2_OVF_vect){
 	static int counter = 0;
 	
-	if(counter == 6){
+	if(counter == 4){
 		rp6DataConstructor();
-		}else if(counter >= 12){
+	}else if(counter == 8){
+		readFromCompass();
+	}else if(counter >= 12){
 		readFromSlave(RP6_ADDRESS);
 		counter = 0;
 	}
@@ -460,6 +471,30 @@ void writeToSlave(uint8_t address, uint8_t dataByte[]){
 	
 	TWISendStop();
 	
+}
+
+void readFromCompass(){	
+	TWISendStart();
+	TWIwaitUntilReady();
+	checkCode(0x08);
+	
+	TWIWrite(0xC0);
+	TWIwaitUntilReady();
+	checkCode(0x18);
+	
+	TWIWrite(1);
+	TWIwaitUntilReady();
+	checkCode(0x28);
+		
+	TWISendStart();
+	TWIwaitUntilReady();
+	checkCode(0x10);
+	
+	compassFlag = 1;
+	
+	TWIWrite(0xC1);
+	TWIwaitUntilReady();
+	checkCode(0x18);
 }
 
 

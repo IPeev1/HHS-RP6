@@ -120,6 +120,7 @@ ISR(USART_INTERRUPT_VECTOR) {
 			case 'a':
 			case 's':
 			case 'd':
+			case 'q':
 			case 't':
 			command = received;
 		}
@@ -170,6 +171,12 @@ ISR(USART_INTERRUPT_VECTOR) {
 					} else {
 					rp6Data.turnDirection = 1;
 				}
+				break;
+				
+				case 'q':
+				rp6Data.driveSpeed = 0;
+				rp6Data.turnDirection = 0;
+				rp6Data.driveDirection = 1;
 				break;
 				
 				case 't':
@@ -291,9 +298,9 @@ void init_rp6Data(){
 	rp6Data.driveSpeed = 0;
 	rp6Data.driveDirection = 0;
 	rp6Data.turnDirection = 0;
-	rp6Data.accelerationRate = 3;
+	rp6Data.accelerationRate = 2000;
 	rp6Data.turnRate = 2500;
-	rp6Data.driveSpeedThreshold = 6000;
+	rp6Data.driveSpeedThreshold = 7000;
 	rp6Data.updateSpeed = 200;
 	rp6Data.enableBeeper = 1;
 }

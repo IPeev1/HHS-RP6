@@ -19,15 +19,15 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING
   7 .debug_abbrev 00001193  00000000  00000000  000034e0  2**0
                   CONTENTS, READONLY, DEBUGGING
-  8 .debug_line   00000d61  00000000  00000000  00004673  2**0
+  8 .debug_line   00000db1  00000000  00000000  00004673  2**0
                   CONTENTS, READONLY, DEBUGGING
-  9 .debug_frame  00000488  00000000  00000000  000053d4  2**2
+  9 .debug_frame  00000488  00000000  00000000  00005424  2**2
                   CONTENTS, READONLY, DEBUGGING
- 10 .debug_str    000009ec  00000000  00000000  0000585c  2**0
+ 10 .debug_str    000009f5  00000000  00000000  000058ac  2**0
                   CONTENTS, READONLY, DEBUGGING
- 11 .debug_loc    00000e5f  00000000  00000000  00006248  2**0
+ 11 .debug_loc    00000e5f  00000000  00000000  000062a1  2**0
                   CONTENTS, READONLY, DEBUGGING
- 12 .debug_ranges 00000150  00000000  00000000  000070a7  2**0
+ 12 .debug_ranges 00000150  00000000  00000000  00007100  2**0
                   CONTENTS, READONLY, DEBUGGING
 
 Disassembly of section .text:
@@ -722,8 +722,8 @@ uint8_t TWIGetStatus(){
      5a2:	99 e0       	ldi	r25, 0x09	; 9
      5a4:	97 83       	std	Z+7, r25	; 0x07
      5a6:	86 83       	std	Z+6, r24	; 0x06
-     5a8:	88 e5       	ldi	r24, 0x58	; 88
-     5aa:	9b e1       	ldi	r25, 0x1B	; 27
+     5a8:	80 ea       	ldi	r24, 0xA0	; 160
+     5aa:	9f e0       	ldi	r25, 0x0F	; 15
      5ac:	91 87       	std	Z+9, r25	; 0x09
      5ae:	80 87       	std	Z+8, r24	; 0x08
      5b0:	88 ec       	ldi	r24, 0xC8	; 200

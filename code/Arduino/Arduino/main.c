@@ -176,7 +176,7 @@ ISR(USART_INTERRUPT_VECTOR) {
 				case 'q':
 				rp6Data.driveSpeed = 0;
 				rp6Data.turnDirection = 0;
-				rp6Data.driveDirection = 1;
+				rp6Data.driveDirection = 0;
 				break;
 				
 				case 't':

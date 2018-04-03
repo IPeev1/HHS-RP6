@@ -25,7 +25,9 @@
 
 //Global variables
 uint32_t ultrasonicSensorTimer = 0;
-uint32_t ultrasonicSensorSpeed = 100000;
+uint32_t ultrasonicSensorSpeed = 250000;
+uint32_t stoptimer = 0;
+uint32_t stoptimerspeed = 100000;
 
 //Micros function ---------------------------------
 uint64_t micros();								//Keep track of the amount of microseconds passed since boot
@@ -69,26 +71,29 @@ void init_USART(){
 	UCSR0B |= (1 << RXCIE0 | 1 << RXEN0);		//Enable USART receiver, receiver interrupt
 	UCSR0B |= 1 << TXEN0;						/*Transmitter enabled for testing*/
 	UCSR0C |= (1 << UCSZ01 | 1 << UCSZ00);		//Asynchronous USART, Parity none, 1 Stop bit, 8-bit character size
-	UBRR0H = 00;
-	UBRR0L = 103;								//Baudrate 9600
+	UBRR0 = 16;								//Baudrate 9600
 }
 //-------------------------------------------------
 // Global Structs
 struct rp6DataBP {
-	int8_t		driveSpeed;				//value between 0 - 100
+	uint16_t	driveSpeed;				//value between 0 - 100
 	int8_t		driveDirection;			//Value 0 or 1
 	int8_t		turnDirection;			//Value -1, 0 or 1
-	uint8_t		accelerationRate;		//Percentage to accelerate with					(Default: 30)
+	uint16_t	accelerationRate;		//Percentage to accelerate with					(Default: 30)
 	uint16_t	turnRate;				//Intensity to turn with						(Default: 3000)
 	uint16_t	driveSpeedThreshold;	//Minimal power needed to actually start moving	(Default: 5000)
 	uint32_t	updateSpeed;			//Interval time between updates					(Default: 200000)
 	uint8_t		enableBeeper;			//Set to 1 to enable reverse driving beeper		(Default: 1	(On))
+	uint16_t	compassAngle;			//Degrees from north given by compass
 } rp6Data;
 
 
 struct arduinoDataBP {
 	uint16_t	motorEncoderLVal;		//Segment count of the left motor encoder		(Updated by interrupt)
 	uint16_t	motorEncoderRVal;		//Same for right encoder ---^
+	uint16_t	distanceDrivenL;		//Distance driven by left motor
+	uint16_t	distanceDrivenR;		//right motor ---^
+	uint16_t	totalDistance;			//Total distance driven by the robot
 } arduinoData;
 
 
@@ -115,6 +120,7 @@ ISR(USART_INTERRUPT_VECTOR) {
 			case 'a':
 			case 's':
 			case 'd':
+			case 'q':
 			case 't':
 			command = received;
 		}
@@ -167,6 +173,12 @@ ISR(USART_INTERRUPT_VECTOR) {
 				}
 				break;
 				
+				case 'q':
+				rp6Data.driveSpeed = 0;
+				rp6Data.turnDirection = 0;
+				rp6Data.driveDirection = 1;
+				break;
+				
 				case 't':
 				if (intValue <= 100) {
 					rp6Data.driveSpeed = intValue;
@@ -177,7 +189,7 @@ ISR(USART_INTERRUPT_VECTOR) {
 			command = 0;														//Reset command
 			bufferPos = -1;													//Reset buffer position
 			
-			globalVariablesTransmitUSART(rp6Data.driveDirection, rp6Data.turnDirection, rp6Data.driveSpeed);
+			//globalVariablesTransmitUSART(rp6Data.driveDirection, rp6Data.turnDirection, rp6Data.driveSpeed);
 		}
 	}
 }
@@ -198,9 +210,39 @@ int main(void){
 	
 	while (1){
 		if (ultrasonicSensorTimer < micros()) {
-			printUltrasonicSensorDistance();
+			//printUltrasonicSensorDistance();
+			writeString("\f\r");
+			writeString("Distance to object: ");
+			writeInt(ultrasonicSensor());
+			writeString("mm\n\n\rSpeed: ");
+			writeInt(rp6Data.driveSpeed);
+			writeString("%\n\rDirection: ");
+			if(rp6Data.driveDirection == 1) writeString("Forward, ");
+			else if(rp6Data.driveDirection == 0) writeString("Stationary, ");
+			else if(rp6Data.driveDirection == -1) writeString("Backwards, ");
+			if(rp6Data.turnDirection == -1) writeString("turning left");
+			else if(rp6Data.turnDirection == 0) writeString("going straight");
+			else if(rp6Data.turnDirection == 1) writeString("turning right");
+			
 			ultrasonicSensorTimer = micros() + ultrasonicSensorSpeed;
 		}
+		
+		if(stoptimer < micros()){
+			uint16_t distance = ultrasonicSensor();
+			
+			if(rp6Data.driveSpeed <= 60 && rp6Data.driveDirection == 1){
+				if(distance < 180){
+					rp6Data.driveSpeed = 0;
+				}
+			}else{
+				if(distance < 280 && rp6Data.driveDirection == 1){
+					rp6Data.driveSpeed = 0;
+				}
+			}
+			
+			stoptimer = micros() + stoptimerspeed;
+		}
+		
 	}
 }
 
@@ -256,10 +298,10 @@ void init_rp6Data(){
 	rp6Data.driveSpeed = 0;
 	rp6Data.driveDirection = 0;
 	rp6Data.turnDirection = 0;
-	rp6Data.accelerationRate = 30;
-	rp6Data.turnRate = 3000;
-	rp6Data.driveSpeedThreshold = 5000;
-	rp6Data.updateSpeed = 200000;
+	rp6Data.accelerationRate = 2000;
+	rp6Data.turnRate = 2500;
+	rp6Data.driveSpeedThreshold = 7000;
+	rp6Data.updateSpeed = 200;
 	rp6Data.enableBeeper = 1;
 }
 
@@ -317,8 +359,11 @@ void I2C_receiveInterpreter(){
 
 
 void arduinoDataInterpreter(){
-	arduinoData.motorEncoderLVal = receiveDataTWI[1] * 30000 / 255;
-	arduinoData.motorEncoderRVal = receiveDataTWI[2] * 30000 / 255;
+	arduinoData.motorEncoderLVal = (receiveDataTWI[1] << 8) + receiveDataTWI[2];
+	arduinoData.motorEncoderRVal = (receiveDataTWI[3] << 8) + receiveDataTWI[4];
+	arduinoData.distanceDrivenL = (receiveDataTWI[5] << 8) + receiveDataTWI[6];
+	arduinoData.distanceDrivenR = (receiveDataTWI[7] << 8) + receiveDataTWI[8];
+	arduinoData.totalDistance = (receiveDataTWI[9] << 8) + receiveDataTWI[10];
 }
 
 
@@ -326,16 +371,29 @@ void rp6DataConstructor(){
 	clearSendData();
 	
 	sendDataTWI[0] = 1;
+	if(rp6Data.driveSpeed > 100){rp6Data.driveSpeed = 100;}
 	sendDataTWI[1] = rp6Data.driveSpeed;
 	sendDataTWI[2] = rp6Data.driveDirection + 1;
 	sendDataTWI[3] = rp6Data.turnDirection + 1;
-	sendDataTWI[4] = rp6Data.accelerationRate;
-	sendDataTWI[5] = rp6Data.turnRate * 255 / 8000;
-	sendDataTWI[6] = rp6Data.driveSpeedThreshold * 255 / 6000;
-	sendDataTWI[7] = rp6Data.updateSpeed / 2000;
-	sendDataTWI[8] = rp6Data.enableBeeper;
 	
-	for(int i = 9; i < DATASIZE; i++){
+	sendDataTWI[4] = (rp6Data.accelerationRate >> 8);
+	sendDataTWI[5] = rp6Data.accelerationRate;
+	
+	sendDataTWI[6] = (rp6Data.turnRate >> 8);
+	sendDataTWI[7] = rp6Data.turnRate;
+	
+	sendDataTWI[8] = (rp6Data.driveSpeedThreshold >> 8);
+	sendDataTWI[9] = rp6Data.driveSpeedThreshold;
+	
+	sendDataTWI[10] = (rp6Data.updateSpeed >> 8);
+	sendDataTWI[11] = rp6Data.updateSpeed;
+	
+	sendDataTWI[12] = rp6Data.enableBeeper;
+	
+	sendDataTWI[13] = (rp6Data.compassAngle >> 8);
+	sendDataTWI[14] = rp6Data.compassAngle;
+	
+	for(int i = 15; i < DATASIZE; i++){
 		sendDataTWI[i] = 0;
 	}
 	

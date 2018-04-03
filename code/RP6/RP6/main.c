@@ -22,6 +22,28 @@
 //Global variables
 uint8_t statLED[2] = {64, 1};
 
+//Global structs
+struct rp6DataBP {
+	uint16_t	driveSpeed;				//value between 0 - 100
+	int8_t		driveDirection;			//Value 0 or 1
+	int8_t		turnDirection;			//Value -1, 0 or 1
+	uint16_t	accelerationRate;		//Percentage to accelerate with					(Default: 30)
+	uint16_t	turnRate;				//Intensity to turn with						(Default: 3000)
+	uint16_t	driveSpeedThreshold;	//Minimal power needed to actually start moving	(Default: 5000)
+	uint32_t	updateSpeed;			//Interval time between updates					(Default: 200000)
+	uint8_t		enableBeeper;			//Set to 1 to enable reverse driving beeper		(Default: 1	(On))
+	uint16_t	compassAngle;			//Degrees from north given by compass
+} rp6Data;
+
+
+struct arduinoDataBP {
+	uint16_t	motorEncoderLVal;		//Segment count of the left motor encoder		(Updated by interrupt)
+	uint16_t	motorEncoderRVal;		//Same for right encoder ---^
+	uint16_t	distanceDrivenL;		//Distance driven by left motor
+	uint16_t	distanceDrivenR;		//right motor ---^
+	uint16_t	totalDistance;			//Total distance driven by the robot
+} arduinoData;
+
 //Functions
 void init_interrupt();							//Initialize global interrupts
 void init_LED();								//Initialize the status LEDs
@@ -55,26 +77,8 @@ void init_motor_timer();
 void init_motor_encoder();
 void init_motor();
 void enableMotorEncoder(int enable);
-int motorDriver();
+int motorDriver(struct rp6DataBP rp6Data);
 //----------------------------------------------------
-
-//Global structs
-struct rp6DataBP {
-	int8_t		driveSpeed;				//value between 0 - 100
-	int8_t		driveDirection;			//Value 0 or 1
-	int8_t		turnDirection;			//Value -1, 0 or 1
-	uint8_t		accelerationRate;		//Percentage to accelerate with					(Default: 30)
-	uint16_t	turnRate;				//Intensity to turn with						(Default: 3000)
-	uint16_t	driveSpeedThreshold;	//Minimal power needed to actually start moving	(Default: 5000)
-	uint32_t	updateSpeed;			//Interval time between updates					(Default: 200000)
-	uint8_t		enableBeeper;			//Set to 1 to enable reverse driving beeper		(Default: 1	(On))
-} rp6Data;
-
-
-struct arduinoDataBP {
-	uint16_t	motorEncoderLVal;		//Segment count of the left motor encoder		(Updated by interrupt)
-	uint16_t	motorEncoderRVal;		//Same for right encoder ---^
-} arduinoData;
 
 //Main function
 int main(void) {
@@ -94,7 +98,7 @@ int main(void) {
 	clearReceiveData();
 	
 	while(1){
-		motorDriver();
+		motorDriver(rp6Data);
 	}
 }
 
@@ -145,10 +149,10 @@ void init_rp6Data(){
 	rp6Data.driveSpeed = 0;
 	rp6Data.driveDirection = 1;
 	rp6Data.turnDirection = 0;
-	rp6Data.accelerationRate = 30;
-	rp6Data.turnRate = 3000;
-	rp6Data.driveSpeedThreshold = 5000;
-	rp6Data.updateSpeed = 200000;
+	rp6Data.accelerationRate = 2;
+	rp6Data.turnRate = 2500;
+	rp6Data.driveSpeedThreshold = 7000;
+	rp6Data.updateSpeed = 200;
 	rp6Data.enableBeeper = 1;
 }
 
@@ -230,11 +234,12 @@ void rp6DataInterpreter(){
 	}
 	
 	rp6Data.turnDirection = receiveData[3]-1;
-	rp6Data.accelerationRate = receiveData[4];
-	rp6Data.turnRate = receiveData[5] * 8000 / 255;
-	rp6Data.driveSpeedThreshold = receiveData[6] * 6000 / 255;
-	rp6Data.updateSpeed = receiveData[7] * 2000;
-	rp6Data.enableBeeper = receiveData[8];
+	rp6Data.accelerationRate = (receiveData[4] << 8) + receiveData[5];
+	rp6Data.turnRate = (receiveData[6] << 8) + receiveData[7];
+	rp6Data.driveSpeedThreshold = (receiveData[8] << 8) + receiveData[9];
+	rp6Data.updateSpeed = (receiveData[10] << 8) + receiveData[11];
+	rp6Data.enableBeeper = receiveData[12];
+	rp6Data.compassAngle = (receiveData[13] << 8) + receiveData[14];
 }
 
 
@@ -242,10 +247,23 @@ void arduinoDataConstructor(){
 	clearSendData();
 	
 	sendData[0] = 1;
-	sendData[1] = arduinoData.motorEncoderLVal * 255 / 30000;
-	sendData[2] = arduinoData.motorEncoderRVal * 255 / 30000;
 	
-	for(int i = 3; i < DATASIZE; i++){
+	sendData[1] = (arduinoData.motorEncoderLVal >> 8);
+	sendData[2] = arduinoData.motorEncoderLVal;
+	
+	sendData[3] = (arduinoData.motorEncoderRVal >> 8);
+	sendData[4] = arduinoData.motorEncoderRVal;
+	
+	sendData[5] = (arduinoData.distanceDrivenL >> 8);
+	sendData[6] = arduinoData.distanceDrivenL;
+	
+	sendData[7] = (arduinoData.distanceDrivenR >> 8);
+	sendData[8] = arduinoData.distanceDrivenR;
+	
+	sendData[9] = (arduinoData.totalDistance >> 8);
+	sendData[10] = arduinoData.totalDistance;
+	
+	for(int i = 11; i < DATASIZE; i++){
 		sendData[i] = 0;
 	}
 }
@@ -278,8 +296,6 @@ void init_motor_timer(){
 
 
 void init_motor_encoder(){
-	arduinoData.motorEncoderLVal = 0;				//Reset the motor encoder variable
-	arduinoData.motorEncoderRVal = 0;				//---^
 	MCUCR |= (1 << ISC00);						//Set interrupt to trigger on any logical change
 	MCUCR |= (1 << ISC10);						//---^
 	GICR |= (1 << INT0);						//Enable interrupt 0
@@ -308,19 +324,20 @@ void enableMotorEncoder(int enable){
 }
 
 
-int motorDriver(){
+int motorDriver(struct rp6DataBP rp6Data){
 	/*
-	localDriveSpeed = rp6Data.driveSpeed;
-	rp6Data.driveDirection;
-	rp6Data.turnDirection;
-	rp6Data.accelerationRate;
-	rp6Data.turnRate;
-	rp6Data.driveSpeedThreshold;
-	rp6Data.updateSpeed;
-	rp6Data.enableBeeper;
+	int8_t		localDriveSpeed				= rp6Data.driveSpeed;
+	int8_t		localDriveDirection			= rp6Data.driveDirection;
+	int8_t		localTurnDirection			= rp6Data.turnDirection;
+	uint8_t		localAccelerationRate		= rp6Data.accelerationRate;
+	uint16_t	localTurnRate				= rp6Data.turnRate;
+	uint16_t	localDriveSpeedThreshold	= rp6Data.driveSpeedThreshold;
+	uint32_t	localUpdateSpeed			= rp6Data.updateSpeed;
+	uint8_t		localEnableBeeper			= rp6Data.enableBeeper;
 	*/
+	
 	//Motor settings
-	static int		deviationCorrection		= 15;				//Drift correction
+	static int	deviationCorrection			= 15;				//Drift correction
 	//-------------
 	
 	static uint64_t updateTimer = 0;				//Declare a timer to check update interval
@@ -340,6 +357,7 @@ int motorDriver(){
 	static uint32_t rightMotorSpeed = 0;
 	//-------------------------
 	
+	rp6Data.updateSpeed = rp6Data.updateSpeed * 1000;
 	
 	//Update timer
 	if(updateTimer > micros()){														//Only execute motor update code if the timer has passed
@@ -373,13 +391,15 @@ int motorDriver(){
 			if(currentDriveSpeed < rp6Data.driveSpeedThreshold){									//If the speed is less than the threshold
 				currentDriveSpeed = rp6Data.driveSpeed;													//Set the speed to the requested value (Probably 0)
 			}else{																			//If the current speed is higher than 5000
-				currentDriveSpeed -= ((currentDriveSpeed * rp6Data.accelerationRate)/100);				//Decelerate with a given percentage of the current speed, determined by accelerationRate
+				if(rp6Data.accelerationRate > 1500){rp6Data.accelerationRate = 1500;}
+				currentDriveSpeed -= rp6Data.accelerationRate;				//Decelerate with a given percentage of the current speed, determined by accelerationRate
 			}
 		}else{																			//If we need to accelerate
 			if(currentDriveSpeed < rp6Data.driveSpeedThreshold){									//And we are still at a speed lower than the threshold
 				currentDriveSpeed += rp6Data.driveSpeedThreshold;										//Speed up with the minimum threshold
 			}else{																			//If we are at a speed higher than the threshold
-				currentDriveSpeed += ((currentDriveSpeed * rp6Data.accelerationRate)/100);				//Accelerate with a percentage of the current speed, determined by accelerationRate
+				if(rp6Data.accelerationRate > 1500){rp6Data.accelerationRate = 1500;}
+				currentDriveSpeed += rp6Data.accelerationRate;				//Accelerate with a percentage of the current speed, determined by accelerationRate
 				if(currentDriveSpeed > rp6Data.driveSpeed){currentDriveSpeed = rp6Data.driveSpeed;}				//If we overshot the requested speed, set the current speed to the requested value (Can't be much of a difference)
 			}
 		}

@@ -71,8 +71,7 @@ void init_USART(){
 	UCSR0B |= (1 << RXCIE0 | 1 << RXEN0);		//Enable USART receiver, receiver interrupt
 	UCSR0B |= 1 << TXEN0;						/*Transmitter enabled for testing*/
 	UCSR0C |= (1 << UCSZ01 | 1 << UCSZ00);		//Asynchronous USART, Parity none, 1 Stop bit, 8-bit character size
-	UBRR0H = 00;
-	UBRR0L = 103;								//Baudrate 9600
+	UBRR0 = 16;								//Baudrate 9600
 }
 //-------------------------------------------------
 // Global Structs

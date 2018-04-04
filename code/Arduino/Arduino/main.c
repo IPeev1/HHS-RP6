@@ -39,6 +39,7 @@ volatile uint64_t t3TotalOverflow;				//Track the total overflows
 //I2C functions -----------------------------------
 void init_TWI();
 void init_TWI_Timer2();
+void init_PWM_Timer4();
 void init_arduinoData();
 void init_rp6Data();
 ISR(TWI_vect);
@@ -140,7 +141,6 @@ ISR(USART_INTERRUPT_VECTOR) {
 			
 		}
 		if (command) {															//Only if a command is set is data transmitted
-			
 			switch (command) {
 				
 				case 'w':
@@ -204,6 +204,7 @@ int main(void){
 	init_USART();
 	init_TWI();
 	init_TWI_Timer2();
+	init_PWM_Timer4();
 	init_rp6Data();
 	init_arduinoData();
 	initTimer();
@@ -292,6 +293,14 @@ void init_TWI_Timer2(){
 	TCNT2 = 0;
 }
 
+void init_PWM_Timer4() {
+	TCCR4A = (1 << COM4A1) | (1 << WGM41) | (1 << WGM40);
+	TCCR4B = (1 << CS42) | (1 << WGM43);
+	TIMSK4 = (1 << OCIE4A);
+	TCNT4 = 0;
+	OCR4A = 0;
+	ICR4 = (65535 / 8);
+}
 
 void init_arduinoData(){
 	arduinoData.motorEncoderLVal = 0;
@@ -365,6 +374,17 @@ ISR(TIMER2_OVF_vect){
 	}
 	
 	counter++;
+}
+
+
+ISR(TIMER4_COMPA_vect) {
+	if (rp6Data.driveDirection == -1 && rp6Data.driveSpeed > 0) {
+		if (OCR4A == 0) {
+			OCR4A = (ICR4 / 2);
+		} else {
+			OCR4A = 0;
+		}
+	}
 }
 
 

@@ -30,7 +30,6 @@ uint32_t stoptimer = 0;
 uint32_t stoptimerspeed = 100000;
 int compassFlag = 0;
 
-
 //Micros function ---------------------------------
 uint64_t micros();								//Keep track of the amount of microseconds passed since boot
 ISR(TIMER3_OVF_vect);							//Interrupt for Timer3, for micros()
@@ -58,6 +57,8 @@ void writeToSlave(uint8_t address, uint8_t dataByte[]);
 void readFromSlave(uint8_t address);
 void readFromCompass();
 //-------------------------------------------------
+void turnSignal();
+//------------------------------------------------
 #define DATASIZE 20										//Define how much data is transferred per transmit (Array length)
 #define RP6_ADDRESS 3									//Define the slave address we are talking to, can currently be only one
 uint8_t sendDataTWI[DATASIZE];							//Create an array for holding the data that needs to be send
@@ -111,7 +112,7 @@ ISR(USART_INTERRUPT_VECTOR) {
 	
 	if ('0' <= received && received <= '9') {									//If received contains a a numeral
 		
-		if (command == 't') {													//If command 't' is currently set
+		if (command == 't' || command == 'q' || command == 'r') {													//If command 't' is currently set
 			if (bufferPos < BUFFER_SIZE)										//Check to prevent overflow of the buffer
 				buffer[++bufferPos] = received;									//Add numeral to buffer
 		}
@@ -124,15 +125,17 @@ ISR(USART_INTERRUPT_VECTOR) {
 			case 'a':
 			case 's':
 			case 'd':
-			case 'q':
+			case 'z':
 			case 't':
+			case 'q':
+			case 'r':
 			command = received;
 		}
 	} else if (received == '\r') {												//If received contains a carriage return
 		
 		uint16_t intValue = 0;													//Value to be passed over I2C with the command. Default value is 0.
 		
-		if (command == 't') {													//If the command is 't', the buffer is converted to an integer and stored in intValue
+		if (command == 't' || command == 'q' || command == 'r') {													//If the command is 't', the buffer is converted to an integer and stored in intValue
 			uint8_t charToInt;
 		
 			for (uint8_t i = 0; i <= bufferPos; i++) {
@@ -177,7 +180,7 @@ ISR(USART_INTERRUPT_VECTOR) {
 				}
 				break;
 				
-				case 'q':
+				case 'z':
 				rp6Data.driveSpeed = 0;
 				rp6Data.turnDirection = 0;
 				rp6Data.driveDirection = 0;
@@ -188,12 +191,18 @@ ISR(USART_INTERRUPT_VECTOR) {
 					rp6Data.driveSpeed = intValue;
 				}
 				break;
+				
+				case 'q':
+				rp6Data.accelerationRate = intValue;
+				break;
+				
+				case 'r':
+				rp6Data.turnRate = intValue;
+				break;
 			}
 		
 			command = 0;														//Reset command
 			bufferPos = -1;													//Reset buffer position
-			
-			//globalVariablesTransmitUSART(rp6Data.driveDirection, rp6Data.turnDirection, rp6Data.driveSpeed);
 		}
 	}
 }
@@ -231,21 +240,38 @@ int main(void){
 			if(rp6Data.turnDirection == -1) writeString("turning left");
 			else if(rp6Data.turnDirection == 0) writeString("going straight");
 			else if(rp6Data.turnDirection == 1) writeString("turning right");
-
+			writeString("\n\rAcceleration rate: ");
+			writeInt(rp6Data.accelerationRate);
+			writeString("\n\rTurn rate: ");
+			writeInt(rp6Data.turnRate);
 			
 			ultrasonicSensorTimer = micros() + ultrasonicSensorSpeed;
 		}
 		
 		if(stoptimer < micros()){
 			uint16_t distance = ultrasonicSensor();
+			static int stopState = 0;
+			static uint16_t tempAcceleration;
 			
-			if(rp6Data.driveSpeed <= 60 && rp6Data.driveDirection == 1){
-				if(distance < 180){
+			if(distance > 400 && stopState == 1){
+				rp6Data.accelerationRate = tempAcceleration;
+			}else if(distance > 300 && stopState == 2){
+				stopState = 0;
+			}
+			
+			if(distance < 400 && distance > 300 && rp6Data.driveSpeed > 40 && rp6Data.driveDirection == 1){
+				rp6Data.driveSpeed = 40;
+			}else if(distance < 300 && distance > 85 && rp6Data.driveSpeed > 25 && rp6Data.driveDirection == 1){
+				rp6Data.driveSpeed = 25;
+			}else if(distance < 85 && rp6Data.driveDirection == 1){
+				if(stopState == 0){
+					tempAcceleration = rp6Data.accelerationRate;
+					rp6Data.accelerationRate = 5000;
 					rp6Data.driveSpeed = 0;
-				}
-			}else{
-				if(distance < 280 && rp6Data.driveDirection == 1){
-					rp6Data.driveSpeed = 0;
+					stopState = 1;
+				}else if(stopState == 1){
+					rp6Data.accelerationRate = tempAcceleration;
+					stopState = 2;
 				}
 			}
 			
@@ -296,6 +322,7 @@ void init_TWI_Timer2(){
 	TCNT2 = 0;
 }
 
+
 void init_PWM_Timer4() {
 	TCCR4A = (1 << COM4A1) | (1 << WGM41) | (1 << WGM40);
 	TCCR4B = (1 << CS42) | (1 << WGM43);
@@ -304,6 +331,7 @@ void init_PWM_Timer4() {
 	OCR4A = 0;
 	ICR4 = (65535 / 8);
 }
+
 
 void init_arduinoData(){
 	arduinoData.motorEncoderLVal = 0;
@@ -315,9 +343,9 @@ void init_rp6Data(){
 	rp6Data.driveSpeed = 0;
 	rp6Data.driveDirection = 0;
 	rp6Data.turnDirection = 0;
-	rp6Data.accelerationRate = 2000;
-	rp6Data.turnRate = 2500;
-	rp6Data.driveSpeedThreshold = 4000;
+	rp6Data.accelerationRate = 4900;
+	rp6Data.turnRate = 9000;
+	rp6Data.driveSpeedThreshold = 5000;
 	rp6Data.updateSpeed = 200;
 	rp6Data.enableBeeper = 1;
 }
@@ -503,6 +531,7 @@ void writeToSlave(uint8_t address, uint8_t dataByte[]){
 	
 }
 
+
 void readFromCompass(){
 	compassFlag = 1;
 	TWISendStart();
@@ -537,6 +566,7 @@ void readFromSlave(uint8_t address){
 	
 }
 
+
 void turnSignal(){
 	uint32_t turnSignalDelay = 500000;
 	uint32_t turnSignalStart = 0;
@@ -554,5 +584,7 @@ void turnSignal(){
 		if(turnSignalStart < micros()){
 			PORTD ^= (1 << PIND7);
 			turnSignalStart = micros() + turnSignalDelay;
+		}
+	}
 }
 //------------------------------------------

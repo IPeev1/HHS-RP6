@@ -30,6 +30,7 @@ uint32_t stoptimer = 0;
 uint32_t stoptimerspeed = 100000;
 int compassFlag = 0;
 
+
 //Micros function ---------------------------------
 uint64_t micros();								//Keep track of the amount of microseconds passed since boot
 ISR(TIMER3_OVF_vect);							//Interrupt for Timer3, for micros()
@@ -141,6 +142,7 @@ ISR(USART_INTERRUPT_VECTOR) {
 			
 		}
 		if (command) {															//Only if a command is set is data transmitted
+
 			switch (command) {
 				
 				case 'w':
@@ -212,6 +214,7 @@ int main(void){
 	//-----------------------
 	
 	while (1){
+		turnSignal();
 		if (ultrasonicSensorTimer < micros()) {
 			writeString("\f\r");
 			writeString("Distance to object: ");
@@ -532,5 +535,24 @@ void readFromSlave(uint8_t address){
 	TWIWrite( (address << 1) + 1 );
 	TWIwaitUntilReady();
 	
+}
+
+void turnSignal(){
+	uint32_t turnSignalDelay = 500000;
+	uint32_t turnSignalStart = 0;
+	
+	DDRC |= (1 << PINC1);
+	DDRD |= (1 << PIND7);
+	
+	if(rp6Data.turnDirection == -1){
+		if(turnSignalStart < micros()){
+			PORTC ^= (1 << PINC1);	
+			turnSignalStart = micros() + turnSignalDelay;
+		}
+	}
+	if(rp6Data.turnDirection == 1){
+		if(turnSignalStart < micros()){
+			PORTD ^= (1 << PIND7);
+			turnSignalStart = micros() + turnSignalDelay;
 }
 //------------------------------------------

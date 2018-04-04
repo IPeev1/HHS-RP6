@@ -568,8 +568,8 @@ void readFromSlave(uint8_t address){
 
 
 void turnSignal(){
-	uint32_t turnSignalDelay = 500000;
-	uint32_t turnSignalStart = 0;
+	static uint32_t turnSignalDelay = 500000;
+	static uint32_t turnSignalStart = 0;
 	
 	DDRC |= (1 << PINC1);
 	DDRD |= (1 << PIND7);

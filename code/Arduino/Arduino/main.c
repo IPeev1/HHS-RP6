@@ -215,17 +215,19 @@ int main(void){
 			writeString("\f\r");
 			writeString("Distance to object: ");
 			writeInt(ultrasonicSensor());
-			writeString("mm\n\n\rSpeed: ");
+			writeString("mm\n\rCompass Angle: ");
+			writeInt(rp6Data.compassAngle);
+			writeChar(248);
+			writeString("\n\n\rSpeed: ");
 			writeInt(rp6Data.driveSpeed);
-			writeString("%\n\rDirection: ");
+			writeString("%\n\n\rDirection: ");
 			if(rp6Data.driveDirection == 1) writeString("Forward, ");
 			else if(rp6Data.driveDirection == 0) writeString("Stationary, ");
 			else if(rp6Data.driveDirection == -1) writeString("Backwards, ");
 			if(rp6Data.turnDirection == -1) writeString("turning left");
 			else if(rp6Data.turnDirection == 0) writeString("going straight");
 			else if(rp6Data.turnDirection == 1) writeString("turning right");
-			writeString("\n\rCompass Angle: ");
-			writeInt(rp6Data.compassAngle);
+
 			
 			ultrasonicSensorTimer = micros() + ultrasonicSensorSpeed;
 		}

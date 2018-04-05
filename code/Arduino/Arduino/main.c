@@ -1,9 +1,9 @@
 /*
- * Arduino1280 XBEE Communication
- *
- * Created: 3/13/2018 2:02:25 PM
- * Author : mc_he
- */ 
+* Arduino1280 XBEE Communication
+*
+* Created: 3/13/2018 2:02:25 PM
+* Author : mc_he
+*/
 #define F_CPU 16000000															//Clock speed
 #define SCL 100000																//Define the TWI clock frequency
 
@@ -28,6 +28,8 @@ uint32_t ultrasonicSensorTimer = 0;
 uint32_t ultrasonicSensorSpeed = 250000;
 uint32_t stoptimer = 0;
 uint32_t stoptimerspeed = 100000;
+uint16_t globalTurnDegree;
+uint8_t turnToDegree = 0;
 int compassFlag = 0;
 
 //Micros function ---------------------------------
@@ -98,8 +100,8 @@ void hardcoreParcour(){
 	
 	switch(parcourLineState){
 		case 0:
-			targetAngle = startDegrees + programmedParcour[(currentParcourLine * 3)];
-			if(targetAngle > 359){targetAngle -= 360;}
+		targetAngle = startDegrees + programmedParcour[(currentParcourLine * 3)];
+		if(targetAngle > 359){targetAngle -= 360;}
 		break;
 	}
 }
@@ -137,17 +139,17 @@ ISR(USART_INTERRUPT_VECTOR){
 	if(('0' <= USARTreceived && USARTreceived <= '9') || USARTreceived == ' '){
 		
 		if(USARTinputPos < 255)
-			USARTinput[++USARTinputPos] = USARTreceived;
-			
-	}else if('a' <= USARTreceived && USARTreceived <= 'z' && USARTreceived != 'b'){
+		USARTinput[++USARTinputPos] = USARTreceived;
+		
+		}else if('a' <= USARTreceived && USARTreceived <= 'z' && USARTreceived != 'b'){
 		
 		USARTcommand = USARTreceived;
 		
-	}else if(USARTreceived == 'b'){
+		}else if(USARTreceived == 'b'){
 		
 		USARTinputPos--;
 		
-	}else if(USARTreceived == '\r'){
+		}else if(USARTreceived == '\r'){
 		
 		if(USARTinputPos >= 0){
 			number[0] = 0;
@@ -199,89 +201,95 @@ ISR(USART_INTERRUPT_VECTOR){
 		if(USARTcommand){
 			switch(USARTcommand){
 				case 'w':
-					runParcour = 0;
-					if (rp6Data.driveDirection == 1) {
-						rp6Data.driveDirection = 0;
+				runParcour = 0;
+				if (rp6Data.driveDirection == 1) {
+					rp6Data.driveDirection = 0;
 					} else {
-						rp6Data.driveDirection = 1;
-					}
+					rp6Data.driveDirection = 1;
+				}
 				break;
 				
 				case 's':
-					runParcour = 0;
-					if (rp6Data.driveDirection == -1) {
-						rp6Data.driveDirection = 0;
-						} else {
-						rp6Data.driveDirection = -1;
-					}
+				runParcour = 0;
+				if (rp6Data.driveDirection == -1) {
+					rp6Data.driveDirection = 0;
+					} else {
+					rp6Data.driveDirection = -1;
+				}
 				break;
 				
 				case 'a':
-					runParcour = 0;
-					if (rp6Data.turnDirection == -1) {
-						rp6Data.turnDirection = 0;
-						} else {
-						rp6Data.turnDirection = -1;
-					}
+				runParcour = 0;
+				if (rp6Data.turnDirection == -1) {
+					rp6Data.turnDirection = 0;
+					} else {
+					rp6Data.turnDirection = -1;
+				}
 				break;
 				
 				case 'd':
-					runParcour = 0;
-					if (rp6Data.turnDirection == 1) {
-						rp6Data.turnDirection = 0;
-						} else {
-						rp6Data.turnDirection = 1;
-					}
+				runParcour = 0;
+				if (rp6Data.turnDirection == 1) {
+					rp6Data.turnDirection = 0;
+					} else {
+					rp6Data.turnDirection = 1;
+				}
 				break;
 				
 				case 't':
-					runParcour = 0;
-					if (number[0] <= 100) {
-						rp6Data.driveSpeed = number[0];
-					}
+				runParcour = 0;
+				if (number[0] <= 100) {
+					rp6Data.driveSpeed = number[0];
+				}
 				break;
 				
 				case 'r':
-					runParcour = 0;
-					rp6Data.turnRate = number[0];
+				runParcour = 0;
+				rp6Data.turnRate = number[0];
 				break;
 				
 				case 'q':
-					runParcour = 0;
-					rp6Data.accelerationRate = number[0];
+				runParcour = 0;
+				rp6Data.accelerationRate = number[0];
 				break;
 				
 				case 'm':
-					programmedAmount++;
-					programmedParcour[(programmedAmount * 3) - 3] = number[0];
-					programmedParcour[(programmedAmount * 3) - 2] = number[1];
-					programmedParcour[(programmedAmount * 3) - 1] = number[2];
+				programmedAmount++;
+				programmedParcour[(programmedAmount * 3) - 3] = number[0];
+				programmedParcour[(programmedAmount * 3) - 2] = number[1];
+				programmedParcour[(programmedAmount * 3) - 1] = number[2];
 				break;
 				
 				case 'u':
-					if(programmedAmount > 0){
-						programmedAmount--;
-					}
+				if(programmedAmount > 0){
+					programmedAmount--;
+				}
 				break;
 				
 				case 'p':
-					if(number[0] < programmedAmount){
-						currentParcourLine = number[0];
-						runParcour = 1;
-						startDegrees = rp6Data.compassAngle;
-						parcourLineState = 0;
-					}
+				if(number[0] < programmedAmount){
+					currentParcourLine = number[0];
+					runParcour = 1;
+					startDegrees = rp6Data.compassAngle;
+					parcourLineState = 0;
+				}
 				break;
 				
 				case 'n':
-					programmedAmount = 0;
+				programmedAmount = 0;
 				break;
 				
 				case 'z':
-					runParcour = 0;
-					rp6Data.driveSpeed = 0;
-					rp6Data.turnDirection = 0;
-					rp6Data.driveDirection = 0;
+				runParcour = 0;
+				rp6Data.driveSpeed = 0;
+				rp6Data.turnDirection = 0;
+				rp6Data.driveDirection = 0;
+				break;
+				
+				case 'c':
+				runParcour = 0;
+				globalTurnDegree = number[0];
+				turnToDegree = 1;
 				break;
 			}
 		}
@@ -298,108 +306,108 @@ ISR(USART_INTERRUPT_VECTOR){
 
 /*
 ISR(USART_INTERRUPT_VECTOR) {
-	static char buffer[BUFFER_SIZE];											//Character buffer to store numerals
-	static int bufferPos = -1;													//Represents which buffer positions are currently in use to store numerals
-	static char received = 0;													//Stores the last character received through USART
-	static char command = 0;													//Stores a character that represents a command. Default value is null
-	
-	received = UDR0;
-	
-	if ('0' <= received && received <= '9') {									//If received contains a a numeral
-		
-		if (command == 't' || command == 'q' || command == 'r') {													//If command 't' is currently set
-			if (bufferPos < BUFFER_SIZE)										//Check to prevent overflow of the buffer
-				buffer[++bufferPos] = received;									//Add numeral to buffer
-		}
-			
-	} else if ('a' <= received && received <= 'z') {							//If received contains a (lower case) letter
-		
-		switch(received) {														//Each valid command is represented by a case
-			
-			case 'w':
-			case 'a':
-			case 's':
-			case 'd':
-			case 'z':
-			case 't':
-			case 'q':
-			case 'r':
-			command = received;
-		}
-	} else if (received == '\r') {												//If received contains a carriage return
-		
-		uint16_t intValue = 0;													//Value to be passed over I2C with the command. Default value is 0.
-		
-		if (command == 't' || command == 'q' || command == 'r') {													//If the command is 't', the buffer is converted to an integer and stored in intValue
-			uint8_t charToInt;
-			
-			for (uint8_t i = 0; i <= bufferPos; i++) {
-				charToInt = (int) (buffer[i] - '0');
-				intValue += charToInt * ((int)(pow(10, bufferPos - i) + 0.5));	//The 0.5 is necessary to properly convert the return value of pow() into an integer
-			}
-			
-		}
-		if (command) {															//Only if a command is set is data transmitted
+static char buffer[BUFFER_SIZE];											//Character buffer to store numerals
+static int bufferPos = -1;													//Represents which buffer positions are currently in use to store numerals
+static char received = 0;													//Stores the last character received through USART
+static char command = 0;													//Stores a character that represents a command. Default value is null
 
-			switch (command) {
-				
-				case 'w':
-				if (rp6Data.driveDirection == 1) {
-					rp6Data.driveDirection = 0;
-				} else {
-					rp6Data.driveDirection = 1;
-				}
-				break;
-				
-				case 'a':
-				if (rp6Data.turnDirection == -1) {
-					rp6Data.turnDirection = 0;
-					} else {
-					rp6Data.turnDirection = -1;
-				}
-				break;
-				
-				case 's':
-				if (rp6Data.driveDirection == -1) {
-					rp6Data.driveDirection = 0;
-				} else {
-					rp6Data.driveDirection = -1;
-				}
-				break;
-				
-				case 'd':
-				if (rp6Data.turnDirection == 1) {
-					rp6Data.turnDirection = 0;
-					} else {
-					rp6Data.turnDirection = 1;
-				}
-				break;
-				
-				case 'z':
-				rp6Data.driveSpeed = 0;
-				rp6Data.turnDirection = 0;
-				rp6Data.driveDirection = 0;
-				break;
-				
-				case 't':
-				if (intValue <= 100) {
-					rp6Data.driveSpeed = intValue;
-				}
-				break;
-				
-				case 'q':
-				rp6Data.accelerationRate = intValue;
-				break;
-				
-				case 'r':
-				rp6Data.turnRate = intValue;
-				break;
-			}
-		
-			command = 0;														//Reset command
-			bufferPos = -1;													//Reset buffer position
-		}
-	}
+received = UDR0;
+
+if ('0' <= received && received <= '9') {									//If received contains a a numeral
+
+if (command == 't' || command == 'q' || command == 'r') {													//If command 't' is currently set
+if (bufferPos < BUFFER_SIZE)										//Check to prevent overflow of the buffer
+buffer[++bufferPos] = received;									//Add numeral to buffer
+}
+
+} else if ('a' <= received && received <= 'z') {							//If received contains a (lower case) letter
+
+switch(received) {														//Each valid command is represented by a case
+
+case 'w':
+case 'a':
+case 's':
+case 'd':
+case 'z':
+case 't':
+case 'q':
+case 'r':
+command = received;
+}
+} else if (received == '\r') {												//If received contains a carriage return
+
+uint16_t intValue = 0;													//Value to be passed over I2C with the command. Default value is 0.
+
+if (command == 't' || command == 'q' || command == 'r') {													//If the command is 't', the buffer is converted to an integer and stored in intValue
+uint8_t charToInt;
+
+for (uint8_t i = 0; i <= bufferPos; i++) {
+charToInt = (int) (buffer[i] - '0');
+intValue += charToInt * ((int)(pow(10, bufferPos - i) + 0.5));	//The 0.5 is necessary to properly convert the return value of pow() into an integer
+}
+
+}
+if (command) {															//Only if a command is set is data transmitted
+
+switch (command) {
+
+case 'w':
+if (rp6Data.driveDirection == 1) {
+rp6Data.driveDirection = 0;
+} else {
+rp6Data.driveDirection = 1;
+}
+break;
+
+case 'a':
+if (rp6Data.turnDirection == -1) {
+rp6Data.turnDirection = 0;
+} else {
+rp6Data.turnDirection = -1;
+}
+break;
+
+case 's':
+if (rp6Data.driveDirection == -1) {
+rp6Data.driveDirection = 0;
+} else {
+rp6Data.driveDirection = -1;
+}
+break;
+
+case 'd':
+if (rp6Data.turnDirection == 1) {
+rp6Data.turnDirection = 0;
+} else {
+rp6Data.turnDirection = 1;
+}
+break;
+
+case 'z':
+rp6Data.driveSpeed = 0;
+rp6Data.turnDirection = 0;
+rp6Data.driveDirection = 0;
+break;
+
+case 't':
+if (intValue <= 100) {
+rp6Data.driveSpeed = intValue;
+}
+break;
+
+case 'q':
+rp6Data.accelerationRate = intValue;
+break;
+
+case 'r':
+rp6Data.turnRate = intValue;
+break;
+}
+
+command = 0;														//Reset command
+bufferPos = -1;													//Reset buffer position
+}
+}
 }
 */
 
@@ -420,7 +428,15 @@ int main(void){
 	while (1){
 		
 		turnSignal();
-		
+		if(turnToDegree){
+			if(!(rp6Data.compassAngle >= (globalTurnDegree - 15) && rp6Data.compassAngle <= (globalTurnDegree + 15))){
+				rp6Data.turnDirection = 1;
+				}else{
+				rp6Data.turnDirection = 0;
+				turnToDegree = 0;
+			}
+			
+		}
 		if(runParcour){
 			hardcoreParcour();
 		}
@@ -448,7 +464,7 @@ int main(void){
 			
 			writeString("\n\n\rCommand: ");
 			writeChar(USARTcommand);
-			writeString("\n\rValue: ");			
+			writeString("\n\rValue: ");
 			if(USARTinputPos >= 0){
 				for(int i = 0; i <= USARTinputPos; i++){
 					writeChar(USARTinput[i]);
@@ -470,21 +486,21 @@ int main(void){
 			
 			if(distance > 400 && stopState == 1){
 				rp6Data.accelerationRate = tempAcceleration;
-			}else if(distance > 300 && stopState == 2){
+				}else if(distance > 300 && stopState == 2){
 				stopState = 0;
 			}
 			
 			if(distance < 400 && distance > 300 && rp6Data.driveSpeed > 40 && rp6Data.driveDirection == 1){
 				rp6Data.driveSpeed = 40;
-			}else if(distance < 300 && distance > 85 && rp6Data.driveSpeed > 25 && rp6Data.driveDirection == 1){
+				}else if(distance < 300 && distance > 85 && rp6Data.driveSpeed > 25 && rp6Data.driveDirection == 1){
 				rp6Data.driveSpeed = 25;
-			}else if(distance < 85 && rp6Data.driveDirection == 1){
+				}else if(distance < 85 && rp6Data.driveDirection == 1){
 				if(stopState == 0){
 					tempAcceleration = rp6Data.accelerationRate;
 					rp6Data.accelerationRate = 5000;
 					rp6Data.driveSpeed = 0;
 					stopState = 1;
-				}else if(stopState == 1){
+					}else if(stopState == 1){
 					rp6Data.accelerationRate = tempAcceleration;
 					stopState = 2;
 				}
@@ -574,7 +590,7 @@ ISR(TWI_vect){
 		case 0x40:
 		if(compassFlag){
 			TWISendNACK();
-		}else{
+			}else{
 			clearReceiveData();
 			bytecounter = 0;
 			TWISendACK();
@@ -597,7 +613,7 @@ ISR(TWI_vect){
 			receiveDataTWI[bytecounter] = TWDR;
 			TWISendStop();
 			I2C_receiveInterpreter();
-		}else{
+			}else{
 			uint64_t temp = TWDR;
 			rp6Data.compassAngle = ((temp * 360) / 255);
 			TWISendStop();
@@ -613,9 +629,9 @@ ISR(TIMER2_OVF_vect){
 	
 	if(counter == 4){
 		rp6DataConstructor();
-	}else if(counter == 8){
+		}else if(counter == 8){
 		readFromCompass();
-	}else if(counter >= 12){
+		}else if(counter >= 12){
 		readFromSlave(RP6_ADDRESS);
 		counter = 0;
 	}
@@ -632,7 +648,7 @@ ISR(TIMER4_COMPA_vect) {
 		microsPassed = 0;
 		if (OCR4A == 0) {
 			OCR4A = (ICR4 / 2);
-		} else {
+			} else {
 			OCR4A = 0;
 		}
 	}
@@ -798,7 +814,7 @@ void turnSignal(){
 	
 	if(rp6Data.turnDirection == -1){
 		if(turnSignalStart < micros()){
-			PORTC ^= (1 << PINC1);	
+			PORTC ^= (1 << PINC1);
 			turnSignalStart = micros() + turnSignalDelay;
 		}
 	}

@@ -13,7 +13,7 @@
 #define SCL 100000
 
 #define BUMPED_STOP_TIME 70000
-#define BUMPED_BACK_TIME 3000000
+#define BUMPED_BACK_TIME 1000000
 //Includes
 #include <stdlib.h>
 #include <avr/io.h>
@@ -492,7 +492,7 @@ uint8_t bumperCheck() {
 	static uint32_t bumperTimer = 0; //Used to determine how long the RP6 drives backwards
 	//static uint8_t enable = 0; //if 1, RP6 drives backwards
 	
-	if (getBumpers()) { //If one or both bumpers are pushed
+	if (getBumpers() && !arduinoData.bumperFlag) { //If one or both bumpers are pushed
 		arduinoData.bumperFlag = 1;
 		bumperTimer = micros();
 	}

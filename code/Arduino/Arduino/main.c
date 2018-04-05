@@ -545,6 +545,7 @@ void init_PWM_Timer4() {
 	
 	TCCR4A = (1 << COM4A1) | (1 << WGM41);
 	TCCR4B = (1 << WGM43) | (1 << CS40);
+	TIMSK4 = (1 << OCIE4A);
 	ICR4 = (65535 / 8);
 }
 
@@ -625,7 +626,7 @@ ISR(TIMER2_OVF_vect){
 
 
 ISR(TIMER4_COMPA_vect) {
-	if (rp6Data.driveDirection == -1 && rp6Data.driveSpeed > 0) {
+	if (rp6Data.driveDirection == -1 && rp6Data.driveSpeed > 0 && micros() % 500000 == 0) {
 		if (OCR4A == 0) {
 			OCR4A = (ICR4 / 2);
 		} else {

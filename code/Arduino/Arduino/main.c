@@ -28,6 +28,7 @@ uint32_t ultrasonicSensorTimer = 0;
 uint32_t ultrasonicSensorSpeed = 250000;
 uint32_t stoptimer = 0;
 uint32_t stoptimerspeed = 100000;
+int compassFlag = 0;
 
 //Micros function ---------------------------------
 uint64_t micros();								//Keep track of the amount of microseconds passed since boot
@@ -38,6 +39,7 @@ volatile uint64_t t3TotalOverflow;				//Track the total overflows
 //I2C functions -----------------------------------
 void init_TWI();
 void init_TWI_Timer2();
+void init_PWM_Timer4();
 void init_arduinoData();
 void init_rp6Data();
 ISR(TWI_vect);
@@ -53,7 +55,10 @@ void TWIwaitUntilReady();
 void checkCode(uint8_t code);
 void writeToSlave(uint8_t address, uint8_t dataByte[]);
 void readFromSlave(uint8_t address);
+void readFromCompass();
 //-------------------------------------------------
+void turnSignal();
+//------------------------------------------------
 #define DATASIZE 20										//Define how much data is transferred per transmit (Array length)
 #define RP6_ADDRESS 3									//Define the slave address we are talking to, can currently be only one
 uint8_t sendDataTWI[DATASIZE];							//Create an array for holding the data that needs to be send
@@ -84,7 +89,7 @@ struct rp6DataBP {
 	uint16_t	driveSpeedThreshold;	//Minimal power needed to actually start moving	(Default: 5000)
 	uint32_t	updateSpeed;			//Interval time between updates					(Default: 200000)
 	uint8_t		enableBeeper;			//Set to 1 to enable reverse driving beeper		(Default: 1	(On))
-	uint16_t	compassAngle;			//Degrees from north given by compass
+	uint64_t	compassAngle;			//Degrees from north given by compass
 } rp6Data;
 
 
@@ -107,7 +112,7 @@ ISR(USART_INTERRUPT_VECTOR) {
 	
 	if ('0' <= received && received <= '9') {									//If received contains a a numeral
 		
-		if (command == 't') {													//If command 't' is currently set
+		if (command == 't' || command == 'q' || command == 'r') {													//If command 't' is currently set
 			if (bufferPos < BUFFER_SIZE)										//Check to prevent overflow of the buffer
 				buffer[++bufferPos] = received;									//Add numeral to buffer
 		}
@@ -120,15 +125,17 @@ ISR(USART_INTERRUPT_VECTOR) {
 			case 'a':
 			case 's':
 			case 'd':
-			case 'q':
+			case 'z':
 			case 't':
+			case 'q':
+			case 'r':
 			command = received;
 		}
 	} else if (received == '\r') {												//If received contains a carriage return
 		
 		uint16_t intValue = 0;													//Value to be passed over I2C with the command. Default value is 0.
 		
-		if (command == 't') {													//If the command is 't', the buffer is converted to an integer and stored in intValue
+		if (command == 't' || command == 'q' || command == 'r') {													//If the command is 't', the buffer is converted to an integer and stored in intValue
 			uint8_t charToInt;
 		
 			for (uint8_t i = 0; i <= bufferPos; i++) {
@@ -138,7 +145,7 @@ ISR(USART_INTERRUPT_VECTOR) {
 			
 		}
 		if (command) {															//Only if a command is set is data transmitted
-			
+
 			switch (command) {
 				
 				case 'w':
@@ -173,7 +180,7 @@ ISR(USART_INTERRUPT_VECTOR) {
 				}
 				break;
 				
-				case 'q':
+				case 'z':
 				rp6Data.driveSpeed = 0;
 				rp6Data.turnDirection = 0;
 				rp6Data.driveDirection = 0;
@@ -184,12 +191,18 @@ ISR(USART_INTERRUPT_VECTOR) {
 					rp6Data.driveSpeed = intValue;
 				}
 				break;
+				
+				case 'q':
+				rp6Data.accelerationRate = intValue;
+				break;
+				
+				case 'r':
+				rp6Data.turnRate = intValue;
+				break;
 			}
 		
 			command = 0;														//Reset command
 			bufferPos = -1;													//Reset buffer position
-			
-			//globalVariablesTransmitUSART(rp6Data.driveDirection, rp6Data.turnDirection, rp6Data.driveSpeed);
 		}
 	}
 }
@@ -202,6 +215,7 @@ int main(void){
 	init_USART();
 	init_TWI();
 	init_TWI_Timer2();
+	init_PWM_Timer4();
 	init_rp6Data();
 	init_arduinoData();
 	initTimer();
@@ -209,34 +223,55 @@ int main(void){
 	//-----------------------
 	
 	while (1){
+		turnSignal();
 		if (ultrasonicSensorTimer < micros()) {
-			//printUltrasonicSensorDistance();
 			writeString("\f\r");
 			writeString("Distance to object: ");
 			writeInt(ultrasonicSensor());
-			writeString("mm\n\n\rSpeed: ");
+			writeString("mm\n\rCompass Angle: ");
+			writeInt(rp6Data.compassAngle);
+			writeChar(248);
+			writeString("\n\n\rSpeed: ");
 			writeInt(rp6Data.driveSpeed);
-			writeString("%\n\rDirection: ");
+			writeString("%\n\n\rDirection: ");
 			if(rp6Data.driveDirection == 1) writeString("Forward, ");
 			else if(rp6Data.driveDirection == 0) writeString("Stationary, ");
 			else if(rp6Data.driveDirection == -1) writeString("Backwards, ");
 			if(rp6Data.turnDirection == -1) writeString("turning left");
 			else if(rp6Data.turnDirection == 0) writeString("going straight");
 			else if(rp6Data.turnDirection == 1) writeString("turning right");
+			writeString("\n\rAcceleration rate: ");
+			writeInt(rp6Data.accelerationRate);
+			writeString("\n\rTurn rate: ");
+			writeInt(rp6Data.turnRate);
 			
 			ultrasonicSensorTimer = micros() + ultrasonicSensorSpeed;
 		}
 		
 		if(stoptimer < micros()){
 			uint16_t distance = ultrasonicSensor();
+			static int stopState = 0;
+			static uint16_t tempAcceleration;
 			
-			if(rp6Data.driveSpeed <= 60 && rp6Data.driveDirection == 1){
-				if(distance < 180){
+			if(distance > 400 && stopState == 1){
+				rp6Data.accelerationRate = tempAcceleration;
+			}else if(distance > 300 && stopState == 2){
+				stopState = 0;
+			}
+			
+			if(distance < 400 && distance > 300 && rp6Data.driveSpeed > 40 && rp6Data.driveDirection == 1){
+				rp6Data.driveSpeed = 40;
+			}else if(distance < 300 && distance > 85 && rp6Data.driveSpeed > 25 && rp6Data.driveDirection == 1){
+				rp6Data.driveSpeed = 25;
+			}else if(distance < 85 && rp6Data.driveDirection == 1){
+				if(stopState == 0){
+					tempAcceleration = rp6Data.accelerationRate;
+					rp6Data.accelerationRate = 5000;
 					rp6Data.driveSpeed = 0;
-				}
-			}else{
-				if(distance < 280 && rp6Data.driveDirection == 1){
-					rp6Data.driveSpeed = 0;
+					stopState = 1;
+				}else if(stopState == 1){
+					rp6Data.accelerationRate = tempAcceleration;
+					stopState = 2;
 				}
 			}
 			
@@ -288,6 +323,17 @@ void init_TWI_Timer2(){
 }
 
 
+void init_PWM_Timer4() {
+	DDRH = (1 << PINH3);
+	TCCR4A = 0;
+	TCCR4B = 0;
+	
+	TCCR4A = (1 << COM4A1) | (1 << WGM41);
+	TCCR4B = (1 << WGM43) | (1 << CS40);
+	ICR4 = (65535 / 8);
+}
+
+
 void init_arduinoData(){
 	arduinoData.motorEncoderLVal = 0;
 	arduinoData.motorEncoderRVal = 0;
@@ -298,9 +344,9 @@ void init_rp6Data(){
 	rp6Data.driveSpeed = 0;
 	rp6Data.driveDirection = 0;
 	rp6Data.turnDirection = 0;
-	rp6Data.accelerationRate = 2000;
-	rp6Data.turnRate = 2500;
-	rp6Data.driveSpeedThreshold = 4000;
+	rp6Data.accelerationRate = 4900;
+	rp6Data.turnRate = 9000;
+	rp6Data.driveSpeedThreshold = 5000;
 	rp6Data.updateSpeed = 200;
 	rp6Data.enableBeeper = 1;
 }
@@ -311,9 +357,13 @@ ISR(TWI_vect){
 	
 	switch(TWSR){
 		case 0x40:
-		clearReceiveData();
-		bytecounter = 0;
-		TWISendACK();
+		if(compassFlag){
+			TWISendNACK();
+		}else{
+			clearReceiveData();
+			bytecounter = 0;
+			TWISendACK();
+		}
 		break;
 		
 		case 0x50:
@@ -328,9 +378,16 @@ ISR(TWI_vect){
 		break;
 		
 		case 0x58:
-		receiveDataTWI[bytecounter] = TWDR;
-		TWISendStop();
-		I2C_receiveInterpreter();
+		if(!compassFlag){
+			receiveDataTWI[bytecounter] = TWDR;
+			TWISendStop();
+			I2C_receiveInterpreter();
+		}else{
+			uint64_t temp = TWDR;
+			rp6Data.compassAngle = ((temp * 360) / 255);
+			TWISendStop();
+			compassFlag = 0;
+		}
 		break;
 	}
 }
@@ -339,14 +396,33 @@ ISR(TWI_vect){
 ISR(TIMER2_OVF_vect){
 	static int counter = 0;
 	
-	if(counter == 6){
+	if(counter == 4){
 		rp6DataConstructor();
-		}else if(counter >= 12){
+	}else if(counter == 8){
+		readFromCompass();
+	}else if(counter >= 12){
 		readFromSlave(RP6_ADDRESS);
 		counter = 0;
 	}
 	
 	counter++;
+}
+
+
+ISR(TIMER4_COMPA_vect) {
+	static uint64_t microsPassed = 0;
+	uint64_t tempMicros = micros();
+	
+	if (rp6Data.driveDirection == -1 && rp6Data.driveSpeed > 0 && microsPassed >= 500) {
+		microsPassed = 0;
+		if (OCR4A == 0) {
+			OCR4A = (ICR4 / 2);
+		} else {
+			OCR4A = 0;
+		}
+	}
+	
+	microsPassed += micros() - tempMicros;
 }
 
 
@@ -463,6 +539,29 @@ void writeToSlave(uint8_t address, uint8_t dataByte[]){
 }
 
 
+void readFromCompass(){
+	compassFlag = 1;
+	TWISendStart();
+	TWIwaitUntilReady();
+	checkCode(0x08);
+	
+	TWIWrite(0xC0);
+	TWIwaitUntilReady();
+	checkCode(0x18);
+	
+	TWIWrite(1);
+	TWIwaitUntilReady();
+	checkCode(0x28);
+	
+	TWISendStart();
+	TWIwaitUntilReady();
+	checkCode(0x10);
+	
+	TWIWrite(0xC1);
+	TWIwaitUntilReady();
+}
+
+
 void readFromSlave(uint8_t address){
 	
 	TWISendStart();
@@ -472,5 +571,27 @@ void readFromSlave(uint8_t address){
 	TWIWrite( (address << 1) + 1 );
 	TWIwaitUntilReady();
 	
+}
+
+
+void turnSignal(){
+	static uint32_t turnSignalDelay = 500000;
+	static uint32_t turnSignalStart = 0;
+	
+	DDRC |= (1 << PINC1);
+	DDRD |= (1 << PIND7);
+	
+	if(rp6Data.turnDirection == -1){
+		if(turnSignalStart < micros()){
+			PORTC ^= (1 << PINC1);	
+			turnSignalStart = micros() + turnSignalDelay;
+		}
+	}
+	if(rp6Data.turnDirection == 1){
+		if(turnSignalStart < micros()){
+			PORTD ^= (1 << PIND7);
+			turnSignalStart = micros() + turnSignalDelay;
+		}
+	}
 }
 //------------------------------------------

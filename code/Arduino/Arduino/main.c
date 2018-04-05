@@ -324,12 +324,13 @@ void init_TWI_Timer2(){
 
 
 void init_PWM_Timer4() {
-	TCCR4A = (1 << COM4A1) | (1 << WGM41) | (1 << WGM40);
-	TCCR4B = (1 << CS42) | (1 << WGM43);
-	TIMSK4 = (1 << OCIE4A);
-	TCNT4 = 0;
-	OCR4A = 0;
-	ICR4 = (65535 / 8);
+	DDRH = (1 << PINH3);
+	TCCR4A = 0;
+	TCCR4B = 0;
+	
+	TCCR4A = (1 << COM4A1) | (1 << WGM41);
+	TCCR4B = (1 << WGM43) | (1 << CS40);
+	ICR4 = 65535;
 }
 
 
@@ -409,13 +410,19 @@ ISR(TIMER2_OVF_vect){
 
 
 ISR(TIMER4_COMPA_vect) {
-	if (rp6Data.driveDirection == -1 && rp6Data.driveSpeed > 0) {
+	static uint64_t microsPassed = 0;
+	uint64_t tempMicros = micros();
+	
+	if (rp6Data.driveDirection == -1 && rp6Data.driveSpeed > 0 && microsPassed >= 500) {
+		microsPassed = 0;
 		if (OCR4A == 0) {
 			OCR4A = (ICR4 / 2);
 		} else {
 			OCR4A = 0;
 		}
 	}
+	
+	microsPassed += micros() - tempMicros;
 }
 
 

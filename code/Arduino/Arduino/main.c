@@ -64,6 +64,19 @@ void turnSignal();
 uint8_t sendDataTWI[DATASIZE];							//Create an array for holding the data that needs to be send
 uint8_t receiveDataTWI[DATASIZE];						//Same but for the receive data --^
 
+char USARTcommand = ' ';
+char USARTinput[255];
+int USARTinputPos = -1;
+char USARTreceived = ' ';
+
+uint16_t programmedParcour[600];
+int16_t programmedAmount = 0;
+int16_t currentParcourLine = 0;
+uint8_t runParcour = 0;
+uint16_t startDegrees;
+uint8_t parcourLineState = 0;
+void hardcoreParcour();
+
 //Other functions ---------------------------------
 void init_interrupt(){
 	sei();									//Enable global interrupts
@@ -77,6 +90,18 @@ void init_USART(){
 	UCSR0B |= 1 << TXEN0;						/*Transmitter enabled for testing*/
 	UCSR0C |= (1 << UCSZ01 | 1 << UCSZ00);		//Asynchronous USART, Parity none, 1 Stop bit, 8-bit character size
 	UBRR0 = 16;								//Baudrate 9600
+}
+
+
+void hardcoreParcour(){
+	static uint16_t targetAngle = 0;
+	
+	switch(parcourLineState){
+		case 0:
+			targetAngle = startDegrees + programmedParcour[(currentParcourLine * 3)];
+			if(targetAngle > 359){targetAngle -= 360;}
+		break;
+	}
 }
 //-------------------------------------------------
 // Global Structs
@@ -102,6 +127,176 @@ struct arduinoDataBP {
 } arduinoData;
 
 
+ISR(USART_INTERRUPT_VECTOR){
+	static uint16_t number[3] = {0,0,0};
+	static int numberSize[3] = {0,0,0};
+	static int numberStart[3] = {0,0,0};
+	
+	USARTreceived = UDR0;
+	
+	if(('0' <= USARTreceived && USARTreceived <= '9') || USARTreceived == ' '){
+		
+		if(USARTinputPos < 255)
+			USARTinput[++USARTinputPos] = USARTreceived;
+			
+	}else if('a' <= USARTreceived && USARTreceived <= 'z' && USARTreceived != 'b'){
+		
+		USARTcommand = USARTreceived;
+		
+	}else if(USARTreceived == 'b'){
+		
+		USARTinputPos--;
+		
+	}else if(USARTreceived == '\r'){
+		
+		if(USARTinputPos >= 0){
+			number[0] = 0;
+			number[1] = 0;
+			number[2] = 0;
+			
+			numberSize[0] = -1;
+			numberSize[1] = -1;
+			numberSize[2] = -1;
+			
+			numberStart[0] = 0;
+			
+			int numberPos = 0;
+			
+			for(uint8_t i = 0; i <= USARTinputPos; i++){
+				if(USARTinput[i] == ' '){
+					numberPos++;
+					numberStart[numberPos] = i + 1;
+					if(numberPos > 2){
+						break;
+						}else{
+						continue;
+					}
+					}else{
+					numberSize[numberPos]++;
+				}
+			}
+			
+			uint8_t charToInt;
+			numberPos = 0;
+			
+			for(uint8_t i = 0; i <= USARTinputPos; i++){
+				
+				if(USARTinput[i] == ' '){
+					numberPos++;
+					if(numberPos > 2){
+						break;
+						}else{
+						continue;
+					}
+				}
+				
+				charToInt = (int) (USARTinput[i] - '0');
+				number[numberPos] += charToInt * ( (int)(pow(10, numberSize[numberPos] + numberStart[numberPos] - i) + 0.5) );
+				
+			}
+		}
+		
+		if(USARTcommand){
+			switch(USARTcommand){
+				case 'w':
+					runParcour = 0;
+					if (rp6Data.driveDirection == 1) {
+						rp6Data.driveDirection = 0;
+					} else {
+						rp6Data.driveDirection = 1;
+					}
+				break;
+				
+				case 's':
+					runParcour = 0;
+					if (rp6Data.driveDirection == -1) {
+						rp6Data.driveDirection = 0;
+						} else {
+						rp6Data.driveDirection = -1;
+					}
+				break;
+				
+				case 'a':
+					runParcour = 0;
+					if (rp6Data.turnDirection == -1) {
+						rp6Data.turnDirection = 0;
+						} else {
+						rp6Data.turnDirection = -1;
+					}
+				break;
+				
+				case 'd':
+					runParcour = 0;
+					if (rp6Data.turnDirection == 1) {
+						rp6Data.turnDirection = 0;
+						} else {
+						rp6Data.turnDirection = 1;
+					}
+				break;
+				
+				case 't':
+					runParcour = 0;
+					if (number[0] <= 100) {
+						rp6Data.driveSpeed = number[0];
+					}
+				break;
+				
+				case 'r':
+					runParcour = 0;
+					rp6Data.turnRate = number[0];
+				break;
+				
+				case 'q':
+					runParcour = 0;
+					rp6Data.accelerationRate = number[0];
+				break;
+				
+				case 'm':
+					programmedAmount++;
+					programmedParcour[(programmedAmount * 3) - 3] = number[0];
+					programmedParcour[(programmedAmount * 3) - 2] = number[1];
+					programmedParcour[(programmedAmount * 3) - 1] = number[2];
+				break;
+				
+				case 'u':
+					if(programmedAmount > 0){
+						programmedAmount--;
+					}
+				break;
+				
+				case 'p':
+					if(number[0] < programmedAmount){
+						currentParcourLine = number[0];
+						runParcour = 1;
+						startDegrees = rp6Data.compassAngle;
+						parcourLineState = 0;
+					}
+				break;
+				
+				case 'n':
+					programmedAmount = 0;
+				break;
+				
+				case 'z':
+					runParcour = 0;
+					rp6Data.driveSpeed = 0;
+					rp6Data.turnDirection = 0;
+					rp6Data.driveDirection = 0;
+				break;
+			}
+		}
+		
+		USARTcommand = 0;
+		USARTinputPos = -1;
+		
+	}
+	
+	
+	
+	
+}
+
+/*
 ISR(USART_INTERRUPT_VECTOR) {
 	static char buffer[BUFFER_SIZE];											//Character buffer to store numerals
 	static int bufferPos = -1;													//Represents which buffer positions are currently in use to store numerals
@@ -137,7 +332,7 @@ ISR(USART_INTERRUPT_VECTOR) {
 		
 		if (command == 't' || command == 'q' || command == 'r') {													//If the command is 't', the buffer is converted to an integer and stored in intValue
 			uint8_t charToInt;
-		
+			
 			for (uint8_t i = 0; i <= bufferPos; i++) {
 				charToInt = (int) (buffer[i] - '0');
 				intValue += charToInt * ((int)(pow(10, bufferPos - i) + 0.5));	//The 0.5 is necessary to properly convert the return value of pow() into an integer
@@ -206,7 +401,7 @@ ISR(USART_INTERRUPT_VECTOR) {
 		}
 	}
 }
-
+*/
 
 int main(void){
 	//Initialize all functions
@@ -223,14 +418,20 @@ int main(void){
 	//-----------------------
 	
 	while (1){
+		
 		turnSignal();
+		
+		if(runParcour){
+			hardcoreParcour();
+		}
+		
 		if (ultrasonicSensorTimer < micros()) {
 			writeString("\f\r");
 			writeString("Distance to object: ");
 			writeInt(ultrasonicSensor());
 			writeString("mm\n\rCompass Angle: ");
 			writeInt(rp6Data.compassAngle);
-			writeChar(248);
+			writeString(" degrees");
 			writeString("\n\n\rSpeed: ");
 			writeInt(rp6Data.driveSpeed);
 			writeString("%\n\n\rDirection: ");
@@ -244,6 +445,15 @@ int main(void){
 			writeInt(rp6Data.accelerationRate);
 			writeString("\n\rTurn rate: ");
 			writeInt(rp6Data.turnRate);
+			
+			writeString("\n\n\rCommand: ");
+			writeChar(USARTcommand);
+			writeString("\n\rValue: ");			
+			if(USARTinputPos >= 0){
+				for(int i = 0; i <= USARTinputPos; i++){
+					writeChar(USARTinput[i]);
+				}
+			}
 			
 			ultrasonicSensorTimer = micros() + ultrasonicSensorSpeed;
 		}

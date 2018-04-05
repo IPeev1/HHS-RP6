@@ -12,12 +12,15 @@
 #define F_CPU 8000000
 #define SCL 100000
 
+#define BUMPED_STOP_TIME 70000
+#define BUMPED_BACK_TIME 3000000
 //Includes
 #include <stdlib.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <math.h>
 #include <util/delay.h>
+#include "bumpers.h"
 
 //Global variables
 uint8_t statLED[2] = {64, 1};
@@ -33,11 +36,11 @@ struct rp6DataBP {
 	uint32_t	updateSpeed;			//Interval time between updates					(Default: 200000)
 	uint8_t		enableBeeper;			//Set to 1 to enable reverse driving beeper		(Default: 1	(On))
 	uint16_t	compassAngle;			//Degrees from north given by compass
-} rp6Data;
+} rp6Data, bumpedData;
 
 
 struct arduinoDataBP {
-	uint16_t	motorEncoderLVal;		//Segment count of the left motor encoder		(Updated by interrupt)
+	uint16_t	bumperFlag;		//Segment count of the left motor encoder		(Updated by interrupt)
 	uint16_t	motorEncoderRVal;		//Same for right encoder ---^
 	uint16_t	distanceDrivenL;		//Distance driven by left motor
 	uint16_t	distanceDrivenR;		//right motor ---^
@@ -51,6 +54,7 @@ void init_LED();								//Initialize the status LEDs
 //I2C functions ------------------
 void init_TWI();
 void init_rp6Data();
+void init_bumpedData();
 void init_arduinoData();
 ISR(TWI_vect);
 void clearSendData();
@@ -58,6 +62,7 @@ void clearReceiveData();
 void I2C_receiveInterpreter();
 void rp6DataInterpreter();
 void arduinoDataConstructor();
+uint8_t bumperCheck();
 
 //I2C Variables
 #define DATASIZE 20
@@ -90,15 +95,20 @@ int main(void) {
 	init_LED();
 	
 	init_rp6Data();
+	init_bumpedData();
 	init_arduinoData();
 	
 	init_TWI();
 	
 	clearSendData();
 	clearReceiveData();
-	
+		
 	while(1){
-		motorDriver(rp6Data);
+		if (bumperCheck()) {
+			motorDriver(bumpedData);
+		} else {
+			motorDriver(rp6Data);
+		}
 	}
 }
 
@@ -156,9 +166,20 @@ void init_rp6Data(){
 	rp6Data.enableBeeper = 1;
 }
 
+void init_bumpedData() {
+	bumpedData.driveSpeed = 0;
+	bumpedData.driveDirection = 1;
+	bumpedData.turnDirection = 0;
+	bumpedData.accelerationRate = 2000;
+	bumpedData.turnRate = 2500;
+	bumpedData.driveSpeedThreshold = 7000;
+	bumpedData.updateSpeed = 200;
+	bumpedData.enableBeeper = 1;
+	
+}
 
 void init_arduinoData(){
-	arduinoData.motorEncoderLVal = 0;
+	arduinoData.bumperFlag = 0;
 	arduinoData.motorEncoderRVal = 0;
 }
 
@@ -248,8 +269,8 @@ void arduinoDataConstructor(){
 	
 	sendData[0] = 1;
 	
-	sendData[1] = (arduinoData.motorEncoderLVal >> 8);
-	sendData[2] = arduinoData.motorEncoderLVal;
+	sendData[1] = (arduinoData.bumperFlag >> 8);
+	sendData[2] = arduinoData.bumperFlag;
 	
 	sendData[3] = (arduinoData.motorEncoderRVal >> 8);
 	sendData[4] = arduinoData.motorEncoderRVal;
@@ -272,7 +293,6 @@ void arduinoDataConstructor(){
 void init_motor(){
 	init_motor_io();		//Initialize the necessary ports
 	init_motor_timer();		//Initialize the Phase correct PWM timer for the engines
-	init_motor_encoder();	//Initialize the external interrupts for the motor encoders
 }
 
 
@@ -293,38 +313,6 @@ void init_motor_timer(){
 	OCR1A = 0;						//Start the compare registers at 0, no signal
 	OCR1B = 0;						//---^
 }
-
-
-void init_motor_encoder(){
-	MCUCR |= (1 << ISC00);						//Set interrupt to trigger on any logical change
-	MCUCR |= (1 << ISC10);						//---^
-	GICR |= (1 << INT0);						//Enable interrupt 0
-	GICR |= (1 << INT1);						//Enable interrupt 1
-}
-
-
-ISR(INT0_vect){
-	arduinoData.motorEncoderLVal++;							//Increase the encoder variable
-	_delay_ms(30000);
-}
-
-
-ISR(INT1_vect){
-	arduinoData.motorEncoderRVal++;							//Increase the encoder variable
-	_delay_ms(30000);
-}
-
-
-void enableMotorEncoder(int enable){
-	if(enable){									//If enable is set
-		GICR |= (1 << INT0);						//Enable the external interrupt
-		GICR |= (1 << INT1);						//---^
-	}else{										//If not set
-		GICR &= ~(1 << INT0);						//Disable the interrupt
-		GICR &= ~(1 << INT1);						//---^
-	}
-}
-
 
 int motorDriver(struct rp6DataBP rp6Data){	
 	static uint64_t updateTimer = 0;				//Declare a timer to check update interval
@@ -498,3 +486,30 @@ int motorDriver(struct rp6DataBP rp6Data){
 	return 0;
 }
 //------------------------------------------------------
+
+uint8_t bumperCheck() {
+	
+	static uint32_t bumperTimer = 0; //Used to determine how long the RP6 drives backwards
+	//static uint8_t enable = 0; //if 1, RP6 drives backwards
+	
+	if (getBumpers()) { //If one or both bumpers are pushed
+		arduinoData.bumperFlag = 1;
+		bumperTimer = micros();
+	}
+		
+	if (arduinoData.bumperFlag) {
+		
+		if (micros() < bumperTimer + BUMPED_STOP_TIME) {
+			bumpedData.driveSpeed = 0;
+			bumpedData.accelerationRate = 5000;
+		} else if (micros() < bumperTimer + BUMPED_BACK_TIME) {
+			bumpedData.driveSpeed = 30;
+			bumpedData.driveDirection = 0;
+			bumpedData.accelerationRate = rp6Data.accelerationRate;
+		} else {
+			arduinoData.bumperFlag = 0;
+		}
+	}
+	
+	return arduinoData.bumperFlag;
+}

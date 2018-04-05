@@ -64,6 +64,28 @@ void turnSignal();
 uint8_t sendDataTWI[DATASIZE];							//Create an array for holding the data that needs to be send
 uint8_t receiveDataTWI[DATASIZE];						//Same but for the receive data --^
 
+// Global Structs
+struct rp6DataBP {
+	uint16_t	driveSpeed;				//value between 0 - 100
+	int8_t		driveDirection;			//Value 0 or 1
+	int8_t		turnDirection;			//Value -1, 0 or 1
+	uint16_t	accelerationRate;		//Percentage to accelerate with					(Default: 30)
+	uint16_t	turnRate;				//Intensity to turn with						(Default: 3000)
+	uint16_t	driveSpeedThreshold;	//Minimal power needed to actually start moving	(Default: 5000)
+	uint32_t	updateSpeed;			//Interval time between updates					(Default: 200000)
+	uint8_t		enableBeeper;			//Set to 1 to enable reverse driving beeper		(Default: 1	(On))
+	uint64_t	compassAngle;			//Degrees from north given by compass
+} rp6Data;
+
+
+struct arduinoDataBP {
+	uint16_t	bumperFlag;		//Segment count of the left motor encoder		(Updated by interrupt)
+	uint16_t	actualDriveSpeed;		//Same for right encoder ---^
+	uint16_t	actualLeftMotorSpeed;		//Distance driven by left motor
+	uint16_t	actualRightMotorSpeed;		//right motor ---^
+	uint16_t	totalDistance;			//Total distance driven by the robot
+} arduinoData;
+
 char USARTcommand = ' ';
 char USARTinput[255];
 int USARTinputPos = -1;
@@ -75,6 +97,7 @@ int16_t currentParcourLine = 0;
 uint8_t runParcour = 0;
 uint16_t startDegrees;
 uint8_t parcourLineState = 0;
+uint64_t parcourCommandTimer = 0;
 void hardcoreParcour();
 
 //Other functions ---------------------------------
@@ -95,37 +118,89 @@ void init_USART(){
 
 void hardcoreParcour(){
 	static uint16_t targetAngle = 0;
+	static int running = 0;
 	
-	switch(parcourLineState){
-		case 0:
-			targetAngle = startDegrees + programmedParcour[(currentParcourLine * 3)];
-			if(targetAngle > 359){targetAngle -= 360;}
-		break;
+	if(runParcour == 1 && running == 0){
+		
+		rp6Data.driveSpeed = 0;
+		rp6Data.turnDirection = 0;
+		startDegrees = rp6Data.compassAngle;
+		parcourLineState = 0;
+		
+		if(arduinoData.actualDriveSpeed == 0){
+			running = 1;
+		}
+		
+	}else if(runParcour == 0 && running == 1){
+		
+		running = 0;
+		rp6Data.driveSpeed = 0;
+		rp6Data.turnDirection = 0;
+		
+	}else if(runParcour == 1 && running == 1){
+		
+		targetAngle = startDegrees + programmedParcour[(currentParcourLine * 3)];
+		if(targetAngle > 359){targetAngle -= 360;}
+		
+		if(sqrt(pow(rp6Data.compassAngle - targetAngle, 2)) < 20){
+			
+			switch(parcourLineState){
+				case 0:
+					rp6Data.driveSpeed = programmedParcour[(currentParcourLine * 3) + 1];
+					parcourCommandTimer = micros() + (programmedParcour[(currentParcourLine * 3) + 2] * 1000);
+					rp6Data.turnDirection = 0;
+					parcourLineState = 1;
+				break;
+				
+				case 1:
+					if(parcourCommandTimer < micros()){
+						rp6Data.driveSpeed = 0;
+						rp6Data.turnDirection = 0;
+						parcourLineState = 2;
+					}else{
+						rp6Data.turnDirection = 0;
+					}
+				break;
+				
+				case 2:
+					if(arduinoData.actualDriveSpeed == 0){
+						parcourLineState = 3;
+					}
+				break;
+				
+				case 3:
+					currentParcourLine++;
+					parcourLineState = 0;
+					if(currentParcourLine > (programmedAmount - 1)){
+						runParcour = 0;
+					}
+				break;
+			}
+			
+			
+		}else if(sqrt(pow(rp6Data.compassAngle - targetAngle, 2)) < 179){
+			
+			rp6Data.turnRate = 9000;
+			
+			if(rp6Data.compassAngle > targetAngle){
+				rp6Data.turnDirection = -1;
+				}else{
+				rp6Data.turnDirection = 1;
+			}
+			
+		}else{
+			
+			rp6Data.turnRate = 9000;
+			
+			if(rp6Data.compassAngle > targetAngle){
+				rp6Data.turnDirection = 1;
+				}else{
+				rp6Data.turnDirection = -1;
+			}
+		}
 	}
 }
 //-------------------------------------------------
-// Global Structs
-struct rp6DataBP {
-	uint16_t	driveSpeed;				//value between 0 - 100
-	int8_t		driveDirection;			//Value 0 or 1
-	int8_t		turnDirection;			//Value -1, 0 or 1
-	uint16_t	accelerationRate;		//Percentage to accelerate with					(Default: 30)
-	uint16_t	turnRate;				//Intensity to turn with						(Default: 3000)
-	uint16_t	driveSpeedThreshold;	//Minimal power needed to actually start moving	(Default: 5000)
-	uint32_t	updateSpeed;			//Interval time between updates					(Default: 200000)
-	uint8_t		enableBeeper;			//Set to 1 to enable reverse driving beeper		(Default: 1	(On))
-	uint64_t	compassAngle;			//Degrees from north given by compass
-} rp6Data;
-
-
-struct arduinoDataBP {
-	uint16_t	bumperFlag;		//Segment count of the left motor encoder		(Updated by interrupt)
-	uint16_t	motorEncoderRVal;		//Same for right encoder ---^
-	uint16_t	distanceDrivenL;		//Distance driven by left motor
-	uint16_t	distanceDrivenR;		//right motor ---^
-	uint16_t	totalDistance;			//Total distance driven by the robot
-} arduinoData;
-
 
 ISR(USART_INTERRUPT_VECTOR){
 	static uint16_t number[3] = {0,0,0};
@@ -253,7 +328,11 @@ ISR(USART_INTERRUPT_VECTOR){
 				
 				case 'm':
 					programmedAmount++;
-					programmedParcour[(programmedAmount * 3) - 3] = number[0];
+					if(number[0] >= 359){
+						programmedParcour[(programmedAmount * 3) - 3] = 359;
+					}else{
+						programmedParcour[(programmedAmount * 3) - 3] = number[0];
+					}
 					programmedParcour[(programmedAmount * 3) - 2] = number[1];
 					programmedParcour[(programmedAmount * 3) - 1] = number[2];
 				break;
@@ -268,8 +347,6 @@ ISR(USART_INTERRUPT_VECTOR){
 					if(number[0] < programmedAmount){
 						currentParcourLine = number[0];
 						runParcour = 1;
-						startDegrees = rp6Data.compassAngle;
-						parcourLineState = 0;
 					}
 				break;
 				
@@ -296,112 +373,6 @@ ISR(USART_INTERRUPT_VECTOR){
 	
 }
 
-/*
-ISR(USART_INTERRUPT_VECTOR) {
-	static char buffer[BUFFER_SIZE];											//Character buffer to store numerals
-	static int bufferPos = -1;													//Represents which buffer positions are currently in use to store numerals
-	static char received = 0;													//Stores the last character received through USART
-	static char command = 0;													//Stores a character that represents a command. Default value is null
-	
-	received = UDR0;
-	
-	if ('0' <= received && received <= '9') {									//If received contains a a numeral
-		
-		if (command == 't' || command == 'q' || command == 'r') {													//If command 't' is currently set
-			if (bufferPos < BUFFER_SIZE)										//Check to prevent overflow of the buffer
-				buffer[++bufferPos] = received;									//Add numeral to buffer
-		}
-			
-	} else if ('a' <= received && received <= 'z') {							//If received contains a (lower case) letter
-		
-		switch(received) {														//Each valid command is represented by a case
-			
-			case 'w':
-			case 'a':
-			case 's':
-			case 'd':
-			case 'z':
-			case 't':
-			case 'q':
-			case 'r':
-			command = received;
-		}
-	} else if (received == '\r') {												//If received contains a carriage return
-		
-		uint16_t intValue = 0;													//Value to be passed over I2C with the command. Default value is 0.
-		
-		if (command == 't' || command == 'q' || command == 'r') {													//If the command is 't', the buffer is converted to an integer and stored in intValue
-			uint8_t charToInt;
-			
-			for (uint8_t i = 0; i <= bufferPos; i++) {
-				charToInt = (int) (buffer[i] - '0');
-				intValue += charToInt * ((int)(pow(10, bufferPos - i) + 0.5));	//The 0.5 is necessary to properly convert the return value of pow() into an integer
-			}
-			
-		}
-		if (command) {															//Only if a command is set is data transmitted
-
-			switch (command) {
-				
-				case 'w':
-				if (rp6Data.driveDirection == 1) {
-					rp6Data.driveDirection = 0;
-				} else {
-					rp6Data.driveDirection = 1;
-				}
-				break;
-				
-				case 'a':
-				if (rp6Data.turnDirection == -1) {
-					rp6Data.turnDirection = 0;
-					} else {
-					rp6Data.turnDirection = -1;
-				}
-				break;
-				
-				case 's':
-				if (rp6Data.driveDirection == -1) {
-					rp6Data.driveDirection = 0;
-				} else {
-					rp6Data.driveDirection = -1;
-				}
-				break;
-				
-				case 'd':
-				if (rp6Data.turnDirection == 1) {
-					rp6Data.turnDirection = 0;
-					} else {
-					rp6Data.turnDirection = 1;
-				}
-				break;
-				
-				case 'z':
-				rp6Data.driveSpeed = 0;
-				rp6Data.turnDirection = 0;
-				rp6Data.driveDirection = 0;
-				break;
-				
-				case 't':
-				if (intValue <= 100) {
-					rp6Data.driveSpeed = intValue;
-				}
-				break;
-				
-				case 'q':
-				rp6Data.accelerationRate = intValue;
-				break;
-				
-				case 'r':
-				rp6Data.turnRate = intValue;
-				break;
-			}
-		
-			command = 0;														//Reset command
-			bufferPos = -1;													//Reset buffer position
-		}
-	}
-}
-*/
 
 int main(void){
 	//Initialize all functions
@@ -421,9 +392,7 @@ int main(void){
 		
 		turnSignal();
 		
-		if(runParcour){
-			hardcoreParcour();
-		}
+		hardcoreParcour();
 		
 		if (ultrasonicSensorTimer < micros()) {
 			writeString("\f\r");
@@ -432,7 +401,7 @@ int main(void){
 			writeString("mm\n\rCompass Angle: ");
 			writeInt(rp6Data.compassAngle);
 			writeString(" degrees");
-			writeString("\n\n\rSpeed: ");
+			writeString("\n\n\rSet speed: ");
 			writeInt(rp6Data.driveSpeed);
 			writeString("%\n\n\rDirection: ");
 			if(rp6Data.driveDirection == 1) writeString("Forward, ");
@@ -445,6 +414,9 @@ int main(void){
 			writeInt(rp6Data.accelerationRate);
 			writeString("\n\rTurn rate: ");
 			writeInt(rp6Data.turnRate);
+			writeString("\n\rActual Speed: ");
+			writeInt((arduinoData.actualDriveSpeed * 100) / 25600);
+			writeString("%");
 			
 			writeString("\n\n\rCommand: ");
 			writeChar(USARTcommand);
@@ -453,6 +425,22 @@ int main(void){
 				for(int i = 0; i <= USARTinputPos; i++){
 					writeChar(USARTinput[i]);
 				}
+			}
+			
+			if(runParcour){
+				writeString("\n\n\n\r---- AUTOPILOT ON ----");
+				writeString("Current command: ");
+				writeInt(currentParcourLine);
+				writeString("\n\rTime left: ");
+				int64_t timeLeft = (parcourCommandTimer - micros()) / 1000;
+				if(timeLeft >= 0){
+					writeInt(timeLeft);
+				}else{
+					writeString("0");
+				}
+				writeString("ms");
+				writeString("\n\rCommands left: ");
+				writeInt(programmedAmount - 1 - currentParcourLine);
 			}
 			
 			ultrasonicSensorTimer = micros() + ultrasonicSensorSpeed;
@@ -472,6 +460,10 @@ int main(void){
 				rp6Data.accelerationRate = tempAcceleration;
 			}else if(distance > 300 && stopState == 2){
 				stopState = 0;
+			}
+			
+			if(distance < 400){
+				runParcour = 0;
 			}
 			
 			if(distance < 400 && distance > 300 && rp6Data.driveSpeed > 40 && rp6Data.driveDirection == 1){
@@ -552,7 +544,10 @@ void init_PWM_Timer4() {
 
 void init_arduinoData(){
 	arduinoData.bumperFlag = 0;
-	arduinoData.motorEncoderRVal = 0;
+	arduinoData.actualDriveSpeed = 0;
+	arduinoData.actualLeftMotorSpeed = 0;
+	arduinoData.actualRightMotorSpeed = 0;
+	arduinoData.totalDistance = 0;
 }
 
 
@@ -646,9 +641,9 @@ void I2C_receiveInterpreter(){
 
 void arduinoDataInterpreter(){
 	arduinoData.bumperFlag = (receiveDataTWI[1] << 8) + receiveDataTWI[2];
-	arduinoData.motorEncoderRVal = (receiveDataTWI[3] << 8) + receiveDataTWI[4];
-	arduinoData.distanceDrivenL = (receiveDataTWI[5] << 8) + receiveDataTWI[6];
-	arduinoData.distanceDrivenR = (receiveDataTWI[7] << 8) + receiveDataTWI[8];
+	arduinoData.actualDriveSpeed = (receiveDataTWI[3] << 8) + receiveDataTWI[4];
+	arduinoData.actualLeftMotorSpeed = (receiveDataTWI[5] << 8) + receiveDataTWI[6];
+	arduinoData.actualRightMotorSpeed = (receiveDataTWI[7] << 8) + receiveDataTWI[8];
 	arduinoData.totalDistance = (receiveDataTWI[9] << 8) + receiveDataTWI[10];
 }
 

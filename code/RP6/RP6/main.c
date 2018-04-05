@@ -41,9 +41,9 @@ struct rp6DataBP {
 
 struct arduinoDataBP {
 	uint16_t	bumperFlag;		//Segment count of the left motor encoder		(Updated by interrupt)
-	uint16_t	motorEncoderRVal;		//Same for right encoder ---^
-	uint16_t	distanceDrivenL;		//Distance driven by left motor
-	uint16_t	distanceDrivenR;		//right motor ---^
+	uint16_t	actualDriveSpeed;		//Same for right encoder ---^
+	uint16_t	actualLeftMotorSpeed;		//Distance driven by left motor
+	uint16_t	actualRightMotorSpeed;		//right motor ---^
 	uint16_t	totalDistance;			//Total distance driven by the robot
 } arduinoData;
 
@@ -180,7 +180,10 @@ void init_bumpedData() {
 
 void init_arduinoData(){
 	arduinoData.bumperFlag = 0;
-	arduinoData.motorEncoderRVal = 0;
+	arduinoData.actualDriveSpeed = 0;
+	arduinoData.actualLeftMotorSpeed = 0;
+	arduinoData.actualRightMotorSpeed = 0;
+	arduinoData.totalDistance = 0;
 }
 
 
@@ -272,14 +275,14 @@ void arduinoDataConstructor(){
 	sendData[1] = (arduinoData.bumperFlag >> 8);
 	sendData[2] = arduinoData.bumperFlag;
 	
-	sendData[3] = (arduinoData.motorEncoderRVal >> 8);
-	sendData[4] = arduinoData.motorEncoderRVal;
+	sendData[3] = (arduinoData.actualDriveSpeed >> 8);
+	sendData[4] = arduinoData.actualDriveSpeed;
 	
-	sendData[5] = (arduinoData.distanceDrivenL >> 8);
-	sendData[6] = arduinoData.distanceDrivenL;
+	sendData[5] = (arduinoData.actualLeftMotorSpeed >> 8);
+	sendData[6] = arduinoData.actualLeftMotorSpeed;
 	
-	sendData[7] = (arduinoData.distanceDrivenR >> 8);
-	sendData[8] = arduinoData.distanceDrivenR;
+	sendData[7] = (arduinoData.actualRightMotorSpeed >> 8);
+	sendData[8] = arduinoData.actualRightMotorSpeed;
 	
 	sendData[9] = (arduinoData.totalDistance >> 8);
 	sendData[10] = arduinoData.totalDistance;
@@ -313,6 +316,7 @@ void init_motor_timer(){
 	OCR1A = 0;						//Start the compare registers at 0, no signal
 	OCR1B = 0;						//---^
 }
+
 
 int motorDriver(struct rp6DataBP rp6Data){	
 	static uint64_t updateTimer = 0;				//Declare a timer to check update interval
@@ -365,21 +369,25 @@ int motorDriver(struct rp6DataBP rp6Data){
 				if(currentDriveSpeed < rp6Data.driveSpeedThreshold){									//If the speed is less than the threshold
 					currentDriveSpeed = rp6Data.driveSpeed;													//Set the speed to the requested value (Probably 0)
 				}else{																			//If the current speed is higher than 5000
-					if(rp6Data.accelerationRate > rp6Data.driveSpeedThreshold){rp6Data.accelerationRate = rp6Data.driveSpeedThreshold - 300;}
-					if(currentDriveSpeed < 7000){currentDriveSpeed -= rp6Data.accelerationRate;}
-					else{currentDriveSpeed -= rp6Data.accelerationRate;}							//Decelerate with a given percentage of the current speed, determined by accelerationRate
+					currentDriveSpeed -= rp6Data.accelerationRate;							//Decelerate with a given percentage of the current speed, determined by accelerationRate
 				}
 			}else{																			//If we need to accelerate
 				if(currentDriveSpeed < rp6Data.driveSpeedThreshold){									//And we are still at a speed lower than the threshold
 					currentDriveSpeed += rp6Data.driveSpeedThreshold;										//Speed up with the minimum threshold
 				}else{																			//If we are at a speed higher than the threshold
-				if(rp6Data.accelerationRate > rp6Data.driveSpeedThreshold){rp6Data.accelerationRate = rp6Data.driveSpeedThreshold - 300;}
 					if(currentDriveSpeed < 7000){currentDriveSpeed += rp6Data.accelerationRate/4;}
 					else{currentDriveSpeed += rp6Data.accelerationRate;}							//Accelerate with a percentage of the current speed, determined by accelerationRate
 					if(currentDriveSpeed > rp6Data.driveSpeed){currentDriveSpeed = rp6Data.driveSpeed;}				//If we overshot the requested speed, set the current speed to the requested value (Can't be much of a difference)
 				}
 			}
 		}
+	}
+	
+	
+	if(currentDriveSpeed < 0){
+		currentDriveSpeed = 0;
+	}else if(currentDriveSpeed > 25600){
+		currentDriveSpeed = 25600;
 	}
 	
 	
@@ -478,6 +486,9 @@ int motorDriver(struct rp6DataBP rp6Data){
 		PORTC |= 0b00001000;
 	}
 	
+	arduinoData.actualDriveSpeed = currentDriveSpeed;
+	arduinoData.actualLeftMotorSpeed = leftMotorSpeed;
+	arduinoData.actualRightMotorSpeed = rightMotorSpeed;
 	
 	//Engage the motors
 	OCR1A = rightMotorSpeed;						//Set the calculated value to the PWM compare to engage the right motor

@@ -119,7 +119,7 @@ struct rp6DataBP {
 
 
 struct arduinoDataBP {
-	uint16_t	motorEncoderLVal;		//Segment count of the left motor encoder		(Updated by interrupt)
+	uint16_t	bumperFlag;		//Segment count of the left motor encoder		(Updated by interrupt)
 	uint16_t	motorEncoderRVal;		//Same for right encoder ---^
 	uint16_t	distanceDrivenL;		//Distance driven by left motor
 	uint16_t	distanceDrivenR;		//right motor ---^
@@ -460,7 +460,7 @@ int main(void){
 		
 		if(stoptimer < micros()){
 			
-			if(arduinoData.motorEncoderLVal) {
+			if(arduinoData.bumperFlag) {
 				rp6Data.driveSpeed = 0;
 			}
 			
@@ -550,7 +550,7 @@ void init_PWM_Timer4() {
 
 
 void init_arduinoData(){
-	arduinoData.motorEncoderLVal = 0;
+	arduinoData.bumperFlag = 0;
 	arduinoData.motorEncoderRVal = 0;
 }
 
@@ -650,7 +650,7 @@ void I2C_receiveInterpreter(){
 
 
 void arduinoDataInterpreter(){
-	arduinoData.motorEncoderLVal = (receiveDataTWI[1] << 8) + receiveDataTWI[2];
+	arduinoData.bumperFlag = (receiveDataTWI[1] << 8) + receiveDataTWI[2];
 	arduinoData.motorEncoderRVal = (receiveDataTWI[3] << 8) + receiveDataTWI[4];
 	arduinoData.distanceDrivenL = (receiveDataTWI[5] << 8) + receiveDataTWI[6];
 	arduinoData.distanceDrivenR = (receiveDataTWI[7] << 8) + receiveDataTWI[8];

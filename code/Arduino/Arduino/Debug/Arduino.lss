@@ -24,10 +24,11 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING
   9 .debug_frame  000005f4  00000000  00000000  000060d4  2**2
                   CONTENTS, READONLY, DEBUGGING
- 10 .debug_str    00000a87  00000000  00000000  000066c8  2**0
+ 10 .debug_str    00000a81  00000000  00000000  000066c8  2**0
                   CONTENTS, READONLY, DEBUGGING
- 11 .debug_loc    00001227  00000000  00000000  0000714f  2**0
+ 11 .debug_loc    00001227  00000000  00000000  00007149  2**0
                   CONTENTS, READONLY, DEBUGGING
+<<<<<<< Updated upstream
  12 .debug_ranges 000001a8  00000000  00000000  00008376  2**0
 =======
   0 .data         00000114  00800200  00001c26  00001cba  2**0
@@ -56,6 +57,9 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING
  12 .debug_ranges 00000190  00000000  00000000  000085f3  2**0
 >>>>>>> a6fdfeeb3a87c67237f4ddb77c3b093ef7d90a83
+=======
+ 12 .debug_ranges 000001a8  00000000  00000000  00008370  2**0
+>>>>>>> Stashed changes
                   CONTENTS, READONLY, DEBUGGING
 
 Disassembly of section .text:
@@ -3751,7 +3755,7 @@ int main(void){
 		
 		if(stoptimer < micros()){
 			
-			if(arduinoData.motorEncoderLVal) {
+			if(arduinoData.bumperFlag) {
      e7c:	f4 e0       	ldi	r31, 0x04	; 4
      e7e:	3f 2e       	mov	r3, r31
      e80:	f0 2d       	mov	r31, r0
@@ -3969,7 +3973,7 @@ int main(void){
      fc6:	89 2b       	or	r24, r25
      fc8:	11 f0       	breq	.+4      	; 0xfce <main+0x170>
 			
-			if(arduinoData.motorEncoderLVal) {
+			if(arduinoData.bumperFlag) {
      fca:	19 82       	std	Y+1, r1	; 0x01
      fcc:	18 82       	st	Y, r1
      fce:	d0 d0       	rcall	.+416    	; 0x1170 <ultrasonicSensor>

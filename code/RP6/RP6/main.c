@@ -40,7 +40,7 @@ struct rp6DataBP {
 
 
 struct arduinoDataBP {
-	uint16_t	motorEncoderLVal;		//Segment count of the left motor encoder		(Updated by interrupt)
+	uint16_t	bumperFlag;		//Segment count of the left motor encoder		(Updated by interrupt)
 	uint16_t	motorEncoderRVal;		//Same for right encoder ---^
 	uint16_t	distanceDrivenL;		//Distance driven by left motor
 	uint16_t	distanceDrivenR;		//right motor ---^
@@ -179,7 +179,7 @@ void init_bumpedData() {
 }
 
 void init_arduinoData(){
-	arduinoData.motorEncoderLVal = 0;
+	arduinoData.bumperFlag = 0;
 	arduinoData.motorEncoderRVal = 0;
 }
 
@@ -269,8 +269,8 @@ void arduinoDataConstructor(){
 	
 	sendData[0] = 1;
 	
-	sendData[1] = (arduinoData.motorEncoderLVal >> 8);
-	sendData[2] = arduinoData.motorEncoderLVal;
+	sendData[1] = (arduinoData.bumperFlag >> 8);
+	sendData[2] = arduinoData.bumperFlag;
 	
 	sendData[3] = (arduinoData.motorEncoderRVal >> 8);
 	sendData[4] = arduinoData.motorEncoderRVal;
@@ -293,7 +293,6 @@ void arduinoDataConstructor(){
 void init_motor(){
 	init_motor_io();		//Initialize the necessary ports
 	init_motor_timer();		//Initialize the Phase correct PWM timer for the engines
-	init_motor_encoder();	//Initialize the external interrupts for the motor encoders
 }
 
 
@@ -314,38 +313,6 @@ void init_motor_timer(){
 	OCR1A = 0;						//Start the compare registers at 0, no signal
 	OCR1B = 0;						//---^
 }
-
-
-void init_motor_encoder(){
-	MCUCR |= (1 << ISC00);						//Set interrupt to trigger on any logical change
-	MCUCR |= (1 << ISC10);						//---^
-	GICR |= (1 << INT0);						//Enable interrupt 0
-	GICR |= (1 << INT1);						//Enable interrupt 1
-}
-
-
-// ISR(INT0_vect){
-// 	arduinoData.motorEncoderLVal++;							//Increase the encoder variable
-// 	_delay_ms(30000);
-// }
-// 
-// 
-// ISR(INT1_vect){
-// 	arduinoData.motorEncoderRVal++;							//Increase the encoder variable
-// 	_delay_ms(30000);
-// }
-
-
-void enableMotorEncoder(int enable){
-	if(enable){									//If enable is set
-		GICR |= (1 << INT0);						//Enable the external interrupt
-		GICR |= (1 << INT1);						//---^
-	}else{										//If not set
-		GICR &= ~(1 << INT0);						//Disable the interrupt
-		GICR &= ~(1 << INT1);						//---^
-	}
-}
-
 
 int motorDriver(struct rp6DataBP rp6Data){	
 	static uint64_t updateTimer = 0;				//Declare a timer to check update interval
@@ -526,11 +493,11 @@ uint8_t bumperCheck() {
 	//static uint8_t enable = 0; //if 1, RP6 drives backwards
 	
 	if (getBumpers()) { //If one or both bumpers are pushed
-		arduinoData.motorEncoderLVal = 1;
+		arduinoData.bumperFlag = 1;
 		bumperTimer = micros();
 	}
 		
-	if (arduinoData.motorEncoderLVal) {
+	if (arduinoData.bumperFlag) {
 		
 		if (micros() < bumperTimer + BUMPED_STOP_TIME) {
 			bumpedData.driveSpeed = 0;
@@ -540,9 +507,9 @@ uint8_t bumperCheck() {
 			bumpedData.driveDirection = 0;
 			bumpedData.accelerationRate = rp6Data.accelerationRate;
 		} else {
-			arduinoData.motorEncoderLVal = 0;
+			arduinoData.bumperFlag = 0;
 		}
 	}
 	
-	return arduinoData.motorEncoderLVal;
+	return arduinoData.bumperFlag;
 }

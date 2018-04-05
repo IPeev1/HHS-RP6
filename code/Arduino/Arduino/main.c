@@ -330,7 +330,7 @@ void init_PWM_Timer4() {
 	
 	TCCR4A = (1 << COM4A1) | (1 << WGM41);
 	TCCR4B = (1 << WGM43) | (1 << CS40);
-	ICR4 = 65535;
+	ICR4 = (65535 / 8);
 }
 
 

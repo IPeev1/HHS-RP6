@@ -249,6 +249,11 @@ int main(void){
 		}
 		
 		if(stoptimer < micros()){
+			
+			if(arduinoData.motorEncoderLVal) {
+				rp6Data.driveSpeed = 0;
+			}
+			
 			uint16_t distance = ultrasonicSensor();
 			static int stopState = 0;
 			static uint16_t tempAcceleration;

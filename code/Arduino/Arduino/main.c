@@ -625,19 +625,13 @@ ISR(TIMER2_OVF_vect){
 
 
 ISR(TIMER4_COMPA_vect) {
-	static uint64_t microsPassed = 0;
-	uint64_t tempMicros = micros();
-	
-	if (rp6Data.driveDirection == -1 && rp6Data.driveSpeed > 0 && microsPassed >= 500) {
-		microsPassed = 0;
+	if (rp6Data.driveDirection == -1 && rp6Data.driveSpeed > 0) {
 		if (OCR4A == 0) {
 			OCR4A = (ICR4 / 2);
 		} else {
 			OCR4A = 0;
 		}
 	}
-	
-	microsPassed += micros() - tempMicros;
 }
 
 

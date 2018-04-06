@@ -380,6 +380,7 @@ void writeToTerminal(){
 		writeTerminalTimer = micros() + writeTerminalTimerSpeed;
 	}
 }
+
 //I2C
 void init_TWI()
 {

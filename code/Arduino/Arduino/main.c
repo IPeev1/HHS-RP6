@@ -781,14 +781,18 @@ void turnSignal(){
 	if(rp6Data.turnDirection == -1){
 		if(turnSignalStart < micros()){
 			PORTC ^= (1 << PINC1);	
+			PORTD &= ~(1 << PIND7);
 			turnSignalStart = micros() + turnSignalDelay;
 		}
-	}
-	if(rp6Data.turnDirection == 1){
+	}else if(rp6Data.turnDirection == 1){
 		if(turnSignalStart < micros()){
+			PORTC &= ~(1 << PINC1);
 			PORTD ^= (1 << PIND7);
 			turnSignalStart = micros() + turnSignalDelay;
 		}
+	}else{
+		PORTC &= ~(1 << PINC1);
+		PORTD &= ~(1 << PIND7);
 	}
 }
 //------------------------------------------

@@ -15,6 +15,7 @@
 #include "matthijs_testFunctions.h" /*Contains functions for transmitting over USART for testing purposes*/
 #include "ultrasonicSensor.h"
 #include <util/delay.h>
+#include "musicBox.h"
 
 //Definitions
 #define BUFFER_SIZE 255
@@ -28,6 +29,9 @@ uint32_t ultrasonicSensorTimer = 0;
 uint32_t ultrasonicSensorSpeed = 250000;
 uint32_t stoptimer = 0;
 uint32_t stoptimerspeed = 100000;
+uint32_t backBeepTimer = 0;
+uint32_t backBeepSpeed = 500000;
+
 int compassFlag = 0;
 
 //Micros function ---------------------------------
@@ -39,7 +43,7 @@ volatile uint64_t t3TotalOverflow;				//Track the total overflows
 //I2C functions -----------------------------------
 void init_TWI();
 void init_TWI_Timer2();
-void init_PWM_Timer4();
+//void init_PWM_Timer4();
 void init_arduinoData();
 void init_rp6Data();
 ISR(TWI_vect);
@@ -410,7 +414,7 @@ int main(void){
 	init_USART();
 	init_TWI();
 	init_TWI_Timer2();
-	init_PWM_Timer4();
+	initBackBeep();
 	init_rp6Data();
 	init_arduinoData();
 	initTimer();
@@ -418,7 +422,6 @@ int main(void){
 	//-----------------------
 	
 	while (1){
-		
 		turnSignal();
 		
 		if(runParcour){
@@ -493,6 +496,13 @@ int main(void){
 			stoptimer = micros() + stoptimerspeed;
 		}
 		
+		if (backBeepTimer < micros()) {
+			if ((rp6Data.driveDirection == -1 && rp6Data.driveSpeed > 20)  || arduinoData.bumperFlag) {
+				DDRH ^= (1 << BEEPER);
+				backBeepTimer = micros() + backBeepSpeed;
+			}
+		}
+		
 	}
 }
 
@@ -536,19 +546,6 @@ void init_TWI_Timer2(){
 	TIMSK2 |= (1 << TOIE2);
 	TCNT2 = 0;
 }
-
-
-void init_PWM_Timer4() {
-	DDRH = (1 << PINH3);
-	TCCR4A = 0;
-	TCCR4B = 0;
-	
-	TCCR4A = (1 << COM4A1) | (1 << WGM41);
-	TCCR4B = (1 << WGM43) | (1 << CS40);
-	TIMSK4 = (1 << OCIE4A);
-	ICR4 = (65535 / 8);
-}
-
 
 void init_arduinoData(){
 	arduinoData.bumperFlag = 0;
@@ -623,18 +620,6 @@ ISR(TIMER2_OVF_vect){
 	
 	counter++;
 }
-
-
-ISR(TIMER4_COMPA_vect) {
-	if (rp6Data.driveDirection == -1 && rp6Data.driveSpeed > 0 && micros() % 500000 == 0) {
-		if (OCR4A == 0) {
-			OCR4A = (ICR4 / 2);
-		} else {
-			OCR4A = 0;
-		}
-	}
-}
-
 
 void I2C_receiveInterpreter(){
 	int dataSet = receiveDataTWI[0];

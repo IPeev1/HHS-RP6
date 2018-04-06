@@ -39,6 +39,7 @@ SUBDIRS :=
 C_SRCS +=  \
 ../main.c \
 ../matthijs_testFunctions.c \
+../musicBox.c \
 ../ultrasonicSensor.c
 
 
@@ -51,21 +52,25 @@ ASM_SRCS +=
 OBJS +=  \
 main.o \
 matthijs_testFunctions.o \
+musicBox.o \
 ultrasonicSensor.o
 
 OBJS_AS_ARGS +=  \
 main.o \
 matthijs_testFunctions.o \
+musicBox.o \
 ultrasonicSensor.o
 
 C_DEPS +=  \
 main.d \
 matthijs_testFunctions.d \
+musicBox.d \
 ultrasonicSensor.d
 
 C_DEPS_AS_ARGS +=  \
 main.d \
 matthijs_testFunctions.d \
+musicBox.d \
 ultrasonicSensor.d
 
 OUTPUT_FILE_PATH +=Arduino.elf
@@ -82,6 +87,8 @@ LINKER_SCRIPT_DEP+=
 
 
 # AVR32/GNU C Compiler
+
+
 
 
 

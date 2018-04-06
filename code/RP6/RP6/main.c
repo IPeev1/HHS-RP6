@@ -1,31 +1,55 @@
 /*
- * RP6.c
- *
- * Created: 12-Mar-18 11:07:57
- * Author : Rens
- *			Sander
- *			Ivan
- *			Willem
- *			Matthijs
- */ 
-//Defines
-#define F_CPU 8000000
-#define SCL 100000
 
+De Haagse Hogeschool RP6 robot project (NSE)
+
+Jaar 1 (2017 - 2018)
+
+Created: 12-03-2018
+Finished: 07-04-2018
+
+Authors:
+- Ivan Peev
+- Matthijs Heidema
+- Rens van den Heuvel
+- Willem van der Gaag
+- Sander Klein Breteler
+
+Code voor de RP6 ATmega32
+
+*/
+
+//Defines ----------------------------------------
+//General
+#define F_CPU 8000000
+
+//I2C
+#define SCL 100000
+#define DATASIZE 20
+#define RP6_ADDRESS 3
+
+//Bumpers
 #define BUMPED_STOP_TIME 70000
 #define BUMPED_BACK_TIME 1000000
-//Includes
-#include <stdlib.h>
+//------------------------------------------------
+
+//Libraries --------------------------------------
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <math.h>
 #include <util/delay.h>
+#include <stdlib.h>
+#include <math.h>
 #include "bumpers.h"
+//------------------------------------------------
 
-//Global variables
-uint8_t statLED[2] = {64, 1};
+//Global variables -------------------------------
+//Micros
+volatile uint64_t t0TotalOverflow;				//Track the total overflows
 
-//Global structs
+//I2C
+uint8_t sendData[DATASIZE];
+uint8_t receiveData[DATASIZE];
+
+//Structs (shared data between Arduino and RP6)
 struct rp6DataBP {
 	uint32_t	driveSpeed;				//value between 0 - 100
 	int8_t		driveDirection;			//Value 0 or 1
@@ -35,10 +59,8 @@ struct rp6DataBP {
 	uint16_t	driveSpeedThreshold;	//Minimal power needed to actually start moving	(Default: 5000)
 	uint32_t	updateSpeed;			//Interval time between updates					(Default: 200000)
 	uint8_t		enableBeeper;			//Set to 1 to enable reverse driving beeper		(Default: 1	(On))
-	uint16_t	compassAngle;			//Degrees from north given by compass
+	int64_t		compassAngle;			//Degrees from north given by compass
 } rp6Data, bumpedData;
-
-
 struct arduinoDataBP {
 	uint16_t	bumperFlag;		//Segment count of the left motor encoder		(Updated by interrupt)
 	uint16_t	actualDriveSpeed;		//Same for right encoder ---^
@@ -46,15 +68,20 @@ struct arduinoDataBP {
 	uint16_t	actualRightMotorSpeed;		//right motor ---^
 	uint16_t	totalDistance;			//Total distance driven by the robot
 } arduinoData;
+//------------------------------------------------
 
-//Functions
+//Function declarations --------------------------
+//General
 void init_interrupt();							//Initialize global interrupts
-void init_LED();								//Initialize the status LEDs
 
-//I2C functions ------------------
+//Micros
+uint64_t micros();								//Keep track of the amount of microseconds passed since boot
+ISR(TIMER0_OVF_vect);							//Interrupt for Timer0, for micros()
+void init_micros();								//Configure Timer0
+
+//I2C
 void init_TWI();
 void init_rp6Data();
-void init_bumpedData();
 void init_arduinoData();
 ISR(TWI_vect);
 void clearSendData();
@@ -62,46 +89,35 @@ void clearReceiveData();
 void I2C_receiveInterpreter();
 void rp6DataInterpreter();
 void arduinoDataConstructor();
-uint8_t bumperCheck();
 
-//I2C Variables
-#define DATASIZE 20
-#define RP6_ADDRESS 3
-uint8_t sendData[DATASIZE];
-uint8_t receiveData[DATASIZE];
-//----------------------------------------------------
-//Micros function ------------------------------------
-uint64_t micros();								//Keep track of the amount of microseconds passed since boot
-ISR(TIMER0_OVF_vect);							//Interrupt for Timer0, for micros()
-void init_micros();								//Configure Timer0
-volatile uint64_t t0TotalOverflow;				//Track the total overflows
-//----------------------------------------------------
-//Motor functions ------------------------------------
+//Motor
 void init_motor_io();
 void init_motor_timer();
-void init_motor_encoder();
-void init_motor();
-void enableMotorEncoder(int enable);
 int motorDriver(struct rp6DataBP rp6Data);
-//----------------------------------------------------
 
-//Main function
+//Bumpers
+void init_bumpedData();
+uint8_t bumperCheck();
+//------------------------------------------------
+
+////////////////// MAIN PROGRAM //////////////////
 int main(void) {
 	//Initialize all functions
 	init_interrupt();
+	
 	init_micros();
 	
-	init_motor();
-	init_LED();
-	
-	init_rp6Data();
-	init_bumpedData();
-	init_arduinoData();
-	
 	init_TWI();
-	
+	init_rp6Data();
+	init_arduinoData();
 	clearSendData();
 	clearReceiveData();
+	
+	init_motor_io();
+	init_motor_timer();
+	
+	init_bumpedData();
+	//------------------------
 		
 	while(1){
 		if (bumperCheck()) {
@@ -111,19 +127,15 @@ int main(void) {
 		}
 	}
 }
+//////////////////////////////////////////////////
 
-//Other functions
+//Function definitions ---------------------------
+//General
 void init_interrupt(){
 	sei();									//Enable global interrupts
 }
 
-
-void init_LED(){
-	DDRB |= 0b10000011;
-	DDRC |= 0b01110000;
-}
-
-//Micros function --------------------------------------
+//Micros
 void init_micros(){
 	TCCR0 |= (1 << CS00);			//Set a timer prescaler of '64'
 	TCCR0 |= (1 << CS01);			//---^
@@ -132,19 +144,17 @@ void init_micros(){
 	t0TotalOverflow = 0;			//Initialize the overflow counter by setting it to 0
 }
 
-
 ISR(TIMER0_OVF_vect){						//When the internal timer 1 overflows and loops back to 0, this interrupt triggers
 	t0TotalOverflow++;							//Increase the total overflow counter
 }
-
 
 uint64_t micros(){
 	uint8_t currentTimer0Value = TCNT0;																				//Get the current value of the Timer 0 register
 	uint64_t microsReturnValue = ((2048 * t0TotalOverflow) + (currentTimer0Value * 2048 / 256));					//Calculate the passed microseconds based on the total amount of overflows and the current timer value.
 	return microsReturnValue;																						//Return the calculated value
 }
-//------------------------------------------------------
-//I2C functions ----------------------------------------
+
+//I2C
 void init_TWI(){
 	TWCR = (1 << TWEN) | (1 << TWEA) | (1 << TWIE);		//Enable TWI; Enable Acknowledge; Enable Interrupt
 	TWSR = 0;											//No prescaling
@@ -153,7 +163,6 @@ void init_TWI(){
 	DDRC |= 0b00000011;
 	PORTC |= 0b00000011;
 }
-
 
 void init_rp6Data(){
 	rp6Data.driveSpeed = 0;
@@ -166,18 +175,6 @@ void init_rp6Data(){
 	rp6Data.enableBeeper = 1;
 }
 
-void init_bumpedData() {
-	bumpedData.driveSpeed = 0;
-	bumpedData.driveDirection = 1;
-	bumpedData.turnDirection = 0;
-	bumpedData.accelerationRate = 2000;
-	bumpedData.turnRate = 2500;
-	bumpedData.driveSpeedThreshold = 7000;
-	bumpedData.updateSpeed = 200;
-	bumpedData.enableBeeper = 1;
-	
-}
-
 void init_arduinoData(){
 	arduinoData.bumperFlag = 0;
 	arduinoData.actualDriveSpeed = 0;
@@ -185,7 +182,6 @@ void init_arduinoData(){
 	arduinoData.actualRightMotorSpeed = 0;
 	arduinoData.totalDistance = 0;
 }
-
 
 ISR(TWI_vect){
 	static int byteCounter = 0;
@@ -221,13 +217,11 @@ ISR(TWI_vect){
 	TWCR |= (1 << TWINT);
 }
 
-
 void clearSendData(){
 	for(int i = 0; i < DATASIZE; i++){
 		sendData[i] = 0;
 	}
 }
-
 
 void clearReceiveData(){
 	for(int i = 0; i < DATASIZE; i++){
@@ -235,14 +229,12 @@ void clearReceiveData(){
 	}
 }
 
-
 void I2C_receiveInterpreter(){
 	int dataSet = receiveData[0];
 	switch(dataSet){
 		case(1): rp6DataInterpreter(); break;
 	}
 }
-
 
 void rp6DataInterpreter(){
 	if(receiveData[2]-1 == 0){
@@ -265,7 +257,6 @@ void rp6DataInterpreter(){
 	rp6Data.enableBeeper = receiveData[12];
 	rp6Data.compassAngle = (receiveData[13] << 8) + receiveData[14];
 }
-
 
 void arduinoDataConstructor(){
 	clearSendData();
@@ -291,20 +282,13 @@ void arduinoDataConstructor(){
 		sendData[i] = 0;
 	}
 }
-//------------------------------------------------------
-//Motor functions --------------------------------------
-void init_motor(){
-	init_motor_io();		//Initialize the necessary ports
-	init_motor_timer();		//Initialize the Phase correct PWM timer for the engines
-}
 
-
+//Motor
 void init_motor_io(){
 	DDRD |= 0b00110000;		//Set D5 and D4 on output, these are the motors
 	DDRD &= 0b11110011;		//Set D3 and D2 on input, these are the encoders
 	DDRC |= 0b00001100;		//Set C2 and C3 on output, these are the motor directions
 }
-
 
 void init_motor_timer(){
 	TCCR1A |= (1 << COM1A1);		//Clear PWM on compare match while counting up, and set when counting down
@@ -316,7 +300,6 @@ void init_motor_timer(){
 	OCR1A = 0;						//Start the compare registers at 0, no signal
 	OCR1B = 0;						//---^
 }
-
 
 int motorDriver(struct rp6DataBP rp6Data){	
 	static uint64_t updateTimer = 0;				//Declare a timer to check update interval
@@ -496,7 +479,18 @@ int motorDriver(struct rp6DataBP rp6Data){
 	
 	return 0;
 }
-//------------------------------------------------------
+
+//Bumpers
+void init_bumpedData() {
+	bumpedData.driveSpeed = 0;
+	bumpedData.driveDirection = 1;
+	bumpedData.turnDirection = 0;
+	bumpedData.accelerationRate = 2000;
+	bumpedData.turnRate = 2500;
+	bumpedData.driveSpeedThreshold = 7000;
+	bumpedData.updateSpeed = 200;
+	bumpedData.enableBeeper = 1;
+}
 
 uint8_t bumperCheck() {
 	
@@ -524,3 +518,4 @@ uint8_t bumperCheck() {
 	
 	return arduinoData.bumperFlag;
 }
+//------------------------------------------------

@@ -6,5 +6,7 @@ main.c
 
 matthijs_testFunctions.c
 
+musicBox.c
+
 ultrasonicSensor.c
 

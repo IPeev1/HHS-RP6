@@ -500,6 +500,8 @@ int main(void){
 			if ((rp6Data.driveDirection == -1 && rp6Data.driveSpeed > 20)  || arduinoData.bumperFlag) {
 				DDRH ^= (1 << BEEPER);
 				backBeepTimer = micros() + backBeepSpeed;
+			} else {
+				DDRH &= ~(1 <<  BEEPER);
 			}
 		}
 		

@@ -27,6 +27,8 @@
 //Global variables
 uint32_t ultrasonicSensorTimer = 0;
 uint32_t ultrasonicSensorSpeed = 250000;
+uint32_t parcourRunTimer = 0;
+uint32_t parcourRunTimerSpeed = 100000;
 uint32_t stoptimer = 0;
 uint32_t stoptimerspeed = 100000;
 uint32_t backBeepTimer = 0;
@@ -78,7 +80,7 @@ struct rp6DataBP {
 	uint16_t	driveSpeedThreshold;	//Minimal power needed to actually start moving	(Default: 5000)
 	uint32_t	updateSpeed;			//Interval time between updates					(Default: 200000)
 	uint8_t		enableBeeper;			//Set to 1 to enable reverse driving beeper		(Default: 1	(On))
-	uint64_t	compassAngle;			//Degrees from north given by compass
+	int64_t	compassAngle;				//Degrees from north given by compass
 } rp6Data;
 
 
@@ -121,7 +123,7 @@ void init_USART(){
 
 
 void hardcoreParcour(){
-	static uint16_t targetAngle = 0;
+	static int32_t targetAngle = 0;
 	static int running = 0;
 	
 	if(runParcour == 1 && running == 0){
@@ -145,8 +147,17 @@ void hardcoreParcour(){
 		
 		targetAngle = startDegrees + programmedParcour[(currentParcourLine * 3)];
 		if(targetAngle > 359){targetAngle -= 360;}
+			
+		writeInt(targetAngle);
+		writeString(" ");
 		
-		if(sqrt(pow(rp6Data.compassAngle - targetAngle, 2)) < 20){
+		if(sqrt(pow(rp6Data.compassAngle - targetAngle, 2)) < 15){
+			
+			rp6Data.turnDirection = 0;
+			rp6Data.driveSpeed = 0;
+			writeString("\n\n\rDONE\n\r");
+			
+			parcourLineState = 4;
 			
 			switch(parcourLineState){
 				case 0:
@@ -189,7 +200,7 @@ void hardcoreParcour(){
 			if(rp6Data.compassAngle > targetAngle){
 				rp6Data.turnDirection = -1;
 				}else{
-				rp6Data.turnDirection = 1;
+				rp6Data.turnDirection = -1;//
 			}
 			
 		}else{
@@ -197,7 +208,7 @@ void hardcoreParcour(){
 			rp6Data.turnRate = 9000;
 			
 			if(rp6Data.compassAngle > targetAngle){
-				rp6Data.turnDirection = 1;
+				rp6Data.turnDirection = -1;//
 				}else{
 				rp6Data.turnDirection = -1;
 			}
@@ -337,7 +348,11 @@ ISR(USART_INTERRUPT_VECTOR){
 					}else{
 						programmedParcour[(programmedAmount * 3) - 3] = number[0];
 					}
-					programmedParcour[(programmedAmount * 3) - 2] = number[1];
+					if(number[1] > 100){
+						programmedParcour[(programmedAmount * 3) - 2] = 100;
+					}else{
+						programmedParcour[(programmedAmount * 3) - 2] = number[1];
+					}
 					programmedParcour[(programmedAmount * 3) - 1] = number[2];
 				break;
 				
@@ -348,10 +363,27 @@ ISR(USART_INTERRUPT_VECTOR){
 				break;
 				
 				case 'p':
-					if(number[0] < programmedAmount){
-						currentParcourLine = number[0];
-						runParcour = 1;
-					}
+// 					programmedAmount = 3;
+// 					if(number[0] < programmedAmount){
+// 						currentParcourLine = number[0];
+// 						runParcour = 1;
+// 					}
+					
+					programmedParcour[0] = 90;
+					programmedParcour[1] = 50;
+					programmedParcour[2] = 2000;
+					programmedParcour[3] = 0;
+					programmedParcour[4] = 50;
+					programmedParcour[5] = 1000;
+					programmedParcour[6] = 270;
+					programmedParcour[7] = 100;
+					programmedParcour[8] = 3000;
+					
+					programmedAmount = 3;
+					
+					currentParcourLine = 0;
+					
+					runParcour = 1;
 				break;
 				
 				case 'n':
@@ -395,7 +427,12 @@ int main(void){
 	while (1){
 		turnSignal();
 		
-		hardcoreParcour();
+// 		if(parcourRunTimer < micros()){
+// 			
+// 			hardcoreParcour();
+// 			
+// 			parcourRunTimer = micros() + parcourRunTimerSpeed;
+// 		}
 		
 		if (ultrasonicSensorTimer < micros()) {
 			writeString("\f\r");
@@ -417,9 +454,12 @@ int main(void){
 			writeInt(rp6Data.accelerationRate);
 			writeString("\n\rTurn rate: ");
 			writeInt(rp6Data.turnRate);
-			writeString("\n\rActual Speed: ");
-			writeInt((arduinoData.actualDriveSpeed * 100) / 25600);
-			writeString("%");
+// 			writeString("\n\rActual Speed: ");
+// 			writeInt(arduinoData.actualDriveSpeed);
+// 			writeString("%");
+			
+// 			writeString("\n\n\rRunning parcour? ");
+// 			writeInt(runParcour);
 			
 			writeString("\n\n\rCommand: ");
 			writeChar(USARTcommand);
@@ -430,21 +470,30 @@ int main(void){
 				}
 			}
 			
-			if(runParcour){
-				writeString("\n\n\n\r---- AUTOPILOT ON ----");
-				writeString("Current command: ");
-				writeInt(currentParcourLine);
-				writeString("\n\rTime left: ");
-				int64_t timeLeft = (parcourCommandTimer - micros()) / 1000;
-				if(timeLeft >= 0){
-					writeInt(timeLeft);
-				}else{
-					writeString("0");
-				}
-				writeString("ms");
-				writeString("\n\rCommands left: ");
-				writeInt(programmedAmount - 1 - currentParcourLine);
-			}
+// 			if(runParcour){
+// 				//writeString("\n\n\n\r---- AUTOPILOT ON ----");
+// 				//writeString("Current command: ");
+// 				//writeInt(currentParcourLine);
+// 				//writeString("\n\rTime left: ");
+// 				//int64_t timeLeft = (parcourCommandTimer - micros()) / 1000;
+// 				//if(timeLeft >= 0){
+// 				//	writeInt(timeLeft);
+// 				//}else{
+// 				//	writeString("0");
+// 				//}
+// 				//writeString("ms");
+// 				writeString("\n\rCommands left: ");
+// 				writeInt(programmedAmount - 1 - currentParcourLine);
+// 			}else if(programmedAmount > 0){
+// 				writeString("\n\n\rLast programmed autopilot command: ");
+// 				writeInt(programmedAmount - 1);
+// 				writeString(": ");
+// 				writeInt(programmedParcour[((programmedAmount - 1) * 3) + 0]);
+// 				writeString(" ");
+// 				writeInt(programmedParcour[((programmedAmount - 1) * 3) + 1]);
+// 				writeString(" ");
+// 				writeInt(programmedParcour[((programmedAmount - 1) * 3) + 2]);
+// 			}
 			
 			ultrasonicSensorTimer = micros() + ultrasonicSensorSpeed;
 		}
@@ -604,12 +653,14 @@ ISR(TWI_vect){
 ISR(TIMER2_OVF_vect){
 	static int counter = 0;
 	
-	if(counter == 4){
+	if(counter == 3){
 		rp6DataConstructor();
-	}else if(counter == 8){
+	}else if(counter == 6){
 		readFromCompass();
-	}else if(counter >= 12){
+	}else if(counter == 9){
 		readFromSlave(RP6_ADDRESS);
+	}else if(counter >= 12){
+		readFromCompass();
 		counter = 0;
 	}
 	
@@ -776,12 +827,14 @@ void turnSignal(){
 			PORTC ^= (1 << PINC1);	
 			turnSignalStart = micros() + turnSignalDelay;
 		}
-	}
-	if(rp6Data.turnDirection == 1){
+	}else if(rp6Data.turnDirection == 1){
 		if(turnSignalStart < micros()){
 			PORTD ^= (1 << PIND7);
 			turnSignalStart = micros() + turnSignalDelay;
 		}
+	}else{
+		PORTC &= ~(1<<PINC1);
+		PORTD &= ~(1<<PIND7);
 	}
 }
 //------------------------------------------

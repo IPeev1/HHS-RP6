@@ -501,8 +501,12 @@ int main(void){
 				DDRH ^= (1 << BEEPER);
 				backBeepTimer = micros() + backBeepSpeed;
 			} else {
-				DDRH &= ~(1 <<  BEEPER);
+				DDRH &= ~(1 << BEEPER);
 			}
+		}
+		
+		if (rp6Data.driveDirection != -1 && !arduinoData.bumperFlag) {
+			DDRH &= ~(1 << BEEPER);
 		}
 		
 	}

@@ -51,8 +51,6 @@ Code voor de Arduino Mega ATmega2560
 //Timers (used with micros function)
 uint32_t writeTerminalTimer = 0;
 uint32_t writeTerminalTimerSpeed = 250000;
-uint32_t parcourRunTimer = 0;
-uint32_t parcourRunTimerSpeed = 100000;
 uint32_t ultrasonicTimer = 0;
 uint32_t ultrasonicTimerSpeed = 100000;
 uint32_t backBeepTimer = 0;

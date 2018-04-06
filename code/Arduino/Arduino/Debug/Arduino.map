@@ -112,10 +112,6 @@ Discarded input sections
                 0x00000000        0xc main.o
  .text.TWIGetStatus
                 0x00000000        0x8 main.o
- .data.parcourRunTimerSpeed
-                0x00000000        0x4 main.o
- .bss.parcourRunTimer
-                0x00000000        0x4 main.o
  .text          0x00000000        0x0 matthijs_testFunctions.o
  .data          0x00000000        0x0 matthijs_testFunctions.o
  .bss           0x00000000        0x0 matthijs_testFunctions.o
@@ -1002,21 +998,21 @@ END GROUP
                 0x0080031c                PROVIDE (__bss_start, .)
  *(.bss)
  *(.bss*)
- .bss.tempAcceleration.2126
+ .bss.tempAcceleration.2124
                 0x0080031c        0x2 main.o
- .bss.stopState.2125
+ .bss.stopState.2123
                 0x0080031e        0x2 main.o
- .bss.turnSignalStart.2121
+ .bss.turnSignalStart.2119
                 0x00800320        0x4 main.o
- .bss.counter.2065
+ .bss.counter.2063
                 0x00800324        0x2 main.o
- .bss.bytecounter.2054
+ .bss.bytecounter.2052
                 0x00800326        0x2 main.o
- .bss.numberStart.2013
+ .bss.numberStart.2011
                 0x00800328        0x6 main.o
- .bss.numberSize.2012
+ .bss.numberSize.2010
                 0x0080032e        0x6 main.o
- .bss.number.2011
+ .bss.number.2009
                 0x00800334        0x6 main.o
  .bss.compassFlag
                 0x0080033a        0x2 main.o
@@ -1128,13 +1124,13 @@ END GROUP
 .debug_pubnames
  *(.debug_pubnames)
 
-.debug_info     0x00000000     0x2244
+.debug_info     0x00000000     0x2220
  *(.debug_info .gnu.linkonce.wi.*)
  .debug_info    0x00000000      0xbbc C:/Program Files (x86)/Atmel/Studio/7.0/Packs/atmel/ATmega_DFP/1.2.150/gcc/dev/atmega2560/avr6/crtatmega2560.o
- .debug_info    0x00000bbc      0xf24 main.o
- .debug_info    0x00001ae0      0x3b8 matthijs_testFunctions.o
- .debug_info    0x00001e98       0xce musicBox.o
- .debug_info    0x00001f66      0x2de ultrasonicSensor.o
+ .debug_info    0x00000bbc      0xf00 main.o
+ .debug_info    0x00001abc      0x3b8 matthijs_testFunctions.o
+ .debug_info    0x00001e74       0xce musicBox.o
+ .debug_info    0x00001f42      0x2de ultrasonicSensor.o
 
 .debug_abbrev   0x00000000     0x1258
  *(.debug_abbrev)
@@ -1159,16 +1155,16 @@ END GROUP
  .debug_frame   0x000005ec       0x34 musicBox.o
  .debug_frame   0x00000620       0x74 ultrasonicSensor.o
 
-.debug_str      0x00000000      0xb6c
+.debug_str      0x00000000      0xb47
  *(.debug_str)
  .debug_str     0x00000000      0x3e6 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/atmel/ATmega_DFP/1.2.150/gcc/dev/atmega2560/avr6/crtatmega2560.o
- .debug_str     0x000003e6      0x5fb main.o
-                                0x66b (size before relaxing)
- .debug_str     0x000009e1       0xa9 matthijs_testFunctions.o
+ .debug_str     0x000003e6      0x5d6 main.o
+                                0x646 (size before relaxing)
+ .debug_str     0x000009bc       0xa9 matthijs_testFunctions.o
                                 0x227 (size before relaxing)
- .debug_str     0x00000a8a       0x24 musicBox.o
+ .debug_str     0x00000a65       0x24 musicBox.o
                                 0x191 (size before relaxing)
- .debug_str     0x00000aae       0xbe ultrasonicSensor.o
+ .debug_str     0x00000a89       0xbe ultrasonicSensor.o
                                 0x26b (size before relaxing)
 
 .debug_loc      0x00000000     0x1378

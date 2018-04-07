@@ -438,7 +438,7 @@ int motorDriver(struct rp6DataBP rp6Data){							//Calculate the PWM signal for 
 	
 	//Final safety check
 	if(leftMotorSpeed > 27000){						//Check if we did not accidentally set a speed higher than allowed on the left motor
-		leftMotorSpeed = 27000;							//If we did, set it back to its max
+		leftMotorSpeed = 27000;							//If we did, set it back to its max.
 	}
 	if(rightMotorSpeed > 25600){					//Since the right motor is used to stabilize the left, it is allowed to go a little faster. But if it is even more than that
 		rightMotorSpeed = 25600;						//Set it back to its max

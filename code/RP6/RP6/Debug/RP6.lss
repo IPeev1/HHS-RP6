@@ -2146,7 +2146,7 @@ int motorDriver(struct rp6DataBP rp6Data){							//Calculate the PWM signal for 
     1038:	a1 05       	cpc	r26, r1
     103a:	b1 05       	cpc	r27, r1
     103c:	60 f0       	brcs	.+24     	; 0x1056 <__stack+0x7f7>
-		leftMotorSpeed = 27000;							//If we did, set it back to its max
+		leftMotorSpeed = 27000;							//If we did, set it back to its max.
     103e:	88 e7       	ldi	r24, 0x78	; 120
     1040:	99 e6       	ldi	r25, 0x69	; 105
     1042:	a0 e0       	ldi	r26, 0x00	; 0

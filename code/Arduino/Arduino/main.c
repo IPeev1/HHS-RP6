@@ -619,32 +619,32 @@ void checkUltrasonic(){
 	if(ultrasonicTimer < micros()){																					//Triggers only when enough time has passed, as set in backBeepTimer
 		
 		uint16_t distance = ultrasonicSensor();																		//Stores the current distance to an object according to ultrasonicSensor()
-		static int stopState = 0;																					
-		static uint16_t tempAcceleration;
+		static int stopState = 0;																					//Helper value to ensure the temporarily adjusted accelerationRate gets adjusted back to the desired value
+		static uint16_t tempAcceleration;																			//Stores rp6Data.accelerationData value in order to restore it
 		
-		if(distance > 400 && stopState == 1){
-			rp6Data.accelerationRate = tempAcceleration;
-		}else if(distance > 300 && stopState == 2){
-			stopState = 0;
+		if(distance > 400 && stopState == 1){																		//If distance is over 40.0 cm and stopState  is still 1,
+			rp6Data.accelerationRate = tempAcceleration;															//Restore accelerationRate
+		}else if(distance > 300 && stopState == 2){																	//If distance is over 30.0 cm and stopState is 2
+			stopState = 0;																							//Reset stopState
 		}
 		
-		if(distance < 400 && distance > 300 && rp6Data.driveSpeed > 40 && rp6Data.driveDirection == 1){
-			rp6Data.driveSpeed = 40;
-		}else if(distance < 300 && distance > 85 && rp6Data.driveSpeed > 25 && rp6Data.driveDirection == 1){
-			rp6Data.driveSpeed = 25;
-		}else if(distance < 85 && rp6Data.driveDirection == 1){
-			if(stopState == 0){
-				tempAcceleration = rp6Data.accelerationRate;
-				rp6Data.accelerationRate = 5000;
-				rp6Data.driveSpeed = 0;
-				stopState = 1;
-			}else if(stopState == 1){
-				rp6Data.accelerationRate = tempAcceleration;
-				stopState = 2;
+		if(distance < 400 && distance > 300 && rp6Data.driveSpeed > 40 && rp6Data.driveDirection == 1){				//If distance is between 30.0 and 40.0 cm, driveSpeed is over 40 and RP6 is driving forward
+			rp6Data.driveSpeed = 40;																				//Set driveSpeed to 40
+		}else if(distance < 300 && distance > 85 && rp6Data.driveSpeed > 25 && rp6Data.driveDirection == 1){		//If distance is between 8.5 and 30.0 cm, driveSpeed is over 25 and RP6 is driving forward
+			rp6Data.driveSpeed = 25;																				//Set driveSpeed to 25
+		}else if(distance < 85 && rp6Data.driveDirection == 1){														//If distance is less than 8.5 cm and RP6 is driving forward
+			if(stopState == 0){																						//If stopState is 0
+				tempAcceleration = rp6Data.accelerationRate;														//Store current accelerationRate to restore later
+				rp6Data.accelerationRate = 5000;																	//Temporarily max out accelerationRate to make an emergency stop
+				rp6Data.driveSpeed = 0;																				//Set speed to 0
+				stopState = 1;																						//Set stopState, to prevent adjusted accelerationRate from overwriting tempAcceleration
+			}else if(stopState == 1){																				//If stopState is 1
+				rp6Data.accelerationRate = tempAcceleration;														//Restore accelerationRate
+				stopState = 2;																						//Set stopState to 2
 			}
 		}
 		
-		ultrasonicTimer = micros() + ultrasonicTimerSpeed;
+		ultrasonicTimer = micros() + ultrasonicTimerSpeed;															//Update ultrasonicTimer
 	}
 }
 

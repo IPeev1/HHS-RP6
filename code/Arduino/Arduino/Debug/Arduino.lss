@@ -2103,10 +2103,10 @@ void checkUltrasonic(){
 		uint16_t distance = ultrasonicSensor();																		//Stores the current distance to an object according to ultrasonicSensor()
      ef2:	9a d1       	rcall	.+820    	; 0x1228 <ultrasonicSensor>
      ef4:	81 39       	cpi	r24, 0x91	; 145
-		static int stopState = 0;																					
-		static uint16_t tempAcceleration;
+		static int stopState = 0;																					//Helper value to ensure the temporarily adjusted accelerationRate gets adjusted back to the desired value
+		static uint16_t tempAcceleration;																			//Stores rp6Data.accelerationData value in order to restore it
 		
-		if(distance > 400 && stopState == 1){
+		if(distance > 400 && stopState == 1){																		//If distance is over 40.0 cm and stopState  is still 1,
      ef6:	21 e0       	ldi	r18, 0x01	; 1
      ef8:	92 07       	cpc	r25, r18
      efa:	80 f0       	brcs	.+32     	; 0xf1c <checkUltrasonic+0x82>
@@ -2116,13 +2116,13 @@ void checkUltrasonic(){
      f06:	31 05       	cpc	r19, r1
      f08:	49 f4       	brne	.+18     	; 0xf1c <checkUltrasonic+0x82>
      f0a:	20 91 1c 03 	lds	r18, 0x031C	; 0x80031c <__data_end>
-			rp6Data.accelerationRate = tempAcceleration;
+			rp6Data.accelerationRate = tempAcceleration;															//Restore accelerationRate
      f0e:	30 91 1d 03 	lds	r19, 0x031D	; 0x80031d <__data_end+0x1>
      f12:	30 93 7b 03 	sts	0x037B, r19	; 0x80037b <rp6Data+0x5>
      f16:	20 93 7a 03 	sts	0x037A, r18	; 0x80037a <rp6Data+0x4>
      f1a:	0f c0       	rjmp	.+30     	; 0xf3a <checkUltrasonic+0xa0>
      f1c:	8d 32       	cpi	r24, 0x2D	; 45
-		}else if(distance > 300 && stopState == 2){
+		}else if(distance > 300 && stopState == 2){																	//If distance is over 30.0 cm and stopState is 2
      f1e:	21 e0       	ldi	r18, 0x01	; 1
      f20:	92 07       	cpc	r25, r18
      f22:	58 f0       	brcs	.+22     	; 0xf3a <checkUltrasonic+0xa0>
@@ -2132,12 +2132,12 @@ void checkUltrasonic(){
      f2e:	31 05       	cpc	r19, r1
      f30:	21 f4       	brne	.+8      	; 0xf3a <checkUltrasonic+0xa0>
      f32:	10 92 1f 03 	sts	0x031F, r1	; 0x80031f <stopState.2115+0x1>
-			stopState = 0;
+			stopState = 0;																							//Reset stopState
      f36:	10 92 1e 03 	sts	0x031E, r1	; 0x80031e <stopState.2115>
      f3a:	9c 01       	movw	r18, r24
 		}
 		
-		if(distance < 400 && distance > 300 && rp6Data.driveSpeed > 40 && rp6Data.driveDirection == 1){
+		if(distance < 400 && distance > 300 && rp6Data.driveSpeed > 40 && rp6Data.driveDirection == 1){				//If distance is between 30.0 and 40.0 cm, driveSpeed is over 40 and RP6 is driving forward
      f3c:	2d 52       	subi	r18, 0x2D	; 45
      f3e:	31 40       	sbci	r19, 0x01	; 1
      f40:	23 36       	cpi	r18, 0x63	; 99
@@ -2152,13 +2152,13 @@ void checkUltrasonic(){
      f58:	21 30       	cpi	r18, 0x01	; 1
      f5a:	39 f4       	brne	.+14     	; 0xf6a <checkUltrasonic+0xd0>
      f5c:	88 e2       	ldi	r24, 0x28	; 40
-			rp6Data.driveSpeed = 40;
+			rp6Data.driveSpeed = 40;																				//Set driveSpeed to 40
      f5e:	90 e0       	ldi	r25, 0x00	; 0
      f60:	90 93 77 03 	sts	0x0377, r25	; 0x800377 <rp6Data+0x1>
      f64:	80 93 76 03 	sts	0x0376, r24	; 0x800376 <rp6Data>
      f68:	4a c0       	rjmp	.+148    	; 0xffe <checkUltrasonic+0x164>
      f6a:	9c 01       	movw	r18, r24
-		}else if(distance < 300 && distance > 85 && rp6Data.driveSpeed > 25 && rp6Data.driveDirection == 1){
+		}else if(distance < 300 && distance > 85 && rp6Data.driveSpeed > 25 && rp6Data.driveDirection == 1){		//If distance is between 8.5 and 30.0 cm, driveSpeed is over 25 and RP6 is driving forward
      f6c:	26 55       	subi	r18, 0x56	; 86
      f6e:	31 09       	sbc	r19, r1
      f70:	26 3d       	cpi	r18, 0xD6	; 214
@@ -2173,61 +2173,61 @@ void checkUltrasonic(){
      f88:	81 30       	cpi	r24, 0x01	; 1
      f8a:	c9 f5       	brne	.+114    	; 0xffe <checkUltrasonic+0x164>
      f8c:	89 e1       	ldi	r24, 0x19	; 25
-			rp6Data.driveSpeed = 25;
+			rp6Data.driveSpeed = 25;																				//Set driveSpeed to 25
      f8e:	90 e0       	ldi	r25, 0x00	; 0
      f90:	90 93 77 03 	sts	0x0377, r25	; 0x800377 <rp6Data+0x1>
      f94:	80 93 76 03 	sts	0x0376, r24	; 0x800376 <rp6Data>
      f98:	32 c0       	rjmp	.+100    	; 0xffe <checkUltrasonic+0x164>
      f9a:	85 35       	cpi	r24, 0x55	; 85
-		}else if(distance < 85 && rp6Data.driveDirection == 1){
+		}else if(distance < 85 && rp6Data.driveDirection == 1){														//If distance is less than 8.5 cm and RP6 is driving forward
      f9c:	91 05       	cpc	r25, r1
      f9e:	78 f5       	brcc	.+94     	; 0xffe <checkUltrasonic+0x164>
      fa0:	80 91 78 03 	lds	r24, 0x0378	; 0x800378 <rp6Data+0x2>
      fa4:	81 30       	cpi	r24, 0x01	; 1
      fa6:	59 f5       	brne	.+86     	; 0xffe <checkUltrasonic+0x164>
      fa8:	80 91 1e 03 	lds	r24, 0x031E	; 0x80031e <stopState.2115>
-			if(stopState == 0){
+			if(stopState == 0){																						//If stopState is 0
      fac:	90 91 1f 03 	lds	r25, 0x031F	; 0x80031f <stopState.2115+0x1>
      fb0:	00 97       	sbiw	r24, 0x00	; 0
      fb2:	a9 f4       	brne	.+42     	; 0xfde <checkUltrasonic+0x144>
      fb4:	e6 e7       	ldi	r30, 0x76	; 118
-				tempAcceleration = rp6Data.accelerationRate;
+				tempAcceleration = rp6Data.accelerationRate;														//Store current accelerationRate to restore later
      fb6:	f3 e0       	ldi	r31, 0x03	; 3
      fb8:	84 81       	ldd	r24, Z+4	; 0x04
      fba:	95 81       	ldd	r25, Z+5	; 0x05
      fbc:	90 93 1d 03 	sts	0x031D, r25	; 0x80031d <__data_end+0x1>
      fc0:	80 93 1c 03 	sts	0x031C, r24	; 0x80031c <__data_end>
      fc4:	88 e8       	ldi	r24, 0x88	; 136
-				rp6Data.accelerationRate = 5000;
+				rp6Data.accelerationRate = 5000;																	//Temporarily max out accelerationRate to make an emergency stop
      fc6:	93 e1       	ldi	r25, 0x13	; 19
      fc8:	95 83       	std	Z+5, r25	; 0x05
      fca:	84 83       	std	Z+4, r24	; 0x04
      fcc:	11 82       	std	Z+1, r1	; 0x01
-				rp6Data.driveSpeed = 0;
+				rp6Data.driveSpeed = 0;																				//Set speed to 0
      fce:	10 82       	st	Z, r1
      fd0:	81 e0       	ldi	r24, 0x01	; 1
-				stopState = 1;
+				stopState = 1;																						//Set stopState, to prevent adjusted accelerationRate from overwriting tempAcceleration
      fd2:	90 e0       	ldi	r25, 0x00	; 0
      fd4:	90 93 1f 03 	sts	0x031F, r25	; 0x80031f <stopState.2115+0x1>
      fd8:	80 93 1e 03 	sts	0x031E, r24	; 0x80031e <stopState.2115>
      fdc:	10 c0       	rjmp	.+32     	; 0xffe <checkUltrasonic+0x164>
      fde:	01 97       	sbiw	r24, 0x01	; 1
-			}else if(stopState == 1){
+			}else if(stopState == 1){																				//If stopState is 1
      fe0:	71 f4       	brne	.+28     	; 0xffe <checkUltrasonic+0x164>
      fe2:	80 91 1c 03 	lds	r24, 0x031C	; 0x80031c <__data_end>
-				rp6Data.accelerationRate = tempAcceleration;
+				rp6Data.accelerationRate = tempAcceleration;														//Restore accelerationRate
      fe6:	90 91 1d 03 	lds	r25, 0x031D	; 0x80031d <__data_end+0x1>
      fea:	90 93 7b 03 	sts	0x037B, r25	; 0x80037b <rp6Data+0x5>
      fee:	80 93 7a 03 	sts	0x037A, r24	; 0x80037a <rp6Data+0x4>
      ff2:	82 e0       	ldi	r24, 0x02	; 2
-				stopState = 2;
+				stopState = 2;																						//Set stopState to 2
      ff4:	90 e0       	ldi	r25, 0x00	; 0
      ff6:	90 93 1f 03 	sts	0x031F, r25	; 0x80031f <stopState.2115+0x1>
      ffa:	80 93 1e 03 	sts	0x031E, r24	; 0x80031e <stopState.2115>
 			}
 		}
 		
-		ultrasonicTimer = micros() + ultrasonicTimerSpeed;
+		ultrasonicTimer = micros() + ultrasonicTimerSpeed;															//Update ultrasonicTimer
      ffe:	4c d9       	rcall	.-3432   	; 0x298 <micros>
     1000:	82 2e       	mov	r8, r18
     1002:	93 2e       	mov	r9, r19

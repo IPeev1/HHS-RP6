@@ -126,16 +126,16 @@
     <Compile Include="main.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="matthijs_testFunctions.c">
+    <Compile Include="USART.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="matthijs_testFunctions.h">
+    <Compile Include="USART.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="musicBox.c">
+    <Compile Include="backBeep.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="musicBox.h">
+    <Compile Include="backBeep.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="ultrasonicSensor.c">

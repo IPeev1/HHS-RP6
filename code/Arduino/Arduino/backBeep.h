@@ -6,8 +6,8 @@
  */ 
 
 
-#ifndef MUSICBOX_H_
-#define MUSICBOX_H_
+#ifndef BACKBEEP_H_
+#define BACKBEEP_H_
 
 #define BEEPER PINH3
 #define BEEP_FREQ 400
@@ -16,4 +16,4 @@ void initBackBeep();									//Initializes Timer/Counter 1 in CTC mode, prescale
 int freqToOCR(float frequency);						//Converts a frequency in Hz to an OCR-compatible value
 
 
-#endif /* MUSICBOX_H_ */
+#endif /* BACKBEEP_H_ */

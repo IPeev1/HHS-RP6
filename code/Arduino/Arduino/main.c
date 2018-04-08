@@ -196,71 +196,69 @@ void init_USART(){
 	UBRR0 = 16;										//Baud rate 57600
 }
 
-ISR(USART0_RX_vect){																											//Triggered when data is received over USART (which includes the xBee module)
+ISR(USART0_RX_vect){																			//Triggered when data is received over USART (which includes the xBee module)
 	static uint16_t number[3] = {0,0,0};
 	static int numberSize[3] = {0,0,0};
 	static int numberStart[3] = {0,0,0};
 	
-	USARTreceived = UDR0;																										//Store the received character in USARTreceived
+	USARTreceived = UDR0;																		//Store the received character in USARTreceived
 	
-	if(('0' <= USARTreceived && USARTreceived <= '9') || USARTreceived == ' '){													//If the character is a numeral or a whitespace
+	if(('0' <= USARTreceived && USARTreceived <= '9') || USARTreceived == ' '){					//If the character is a numeral or a whitespace
 		
-		if(USARTinputPos < 255)																									//If the USARTinput array still has room
-		USARTinput[++USARTinputPos] = USARTreceived;																			//Store the numeral or whitespace in USARTinput
+		if(USARTinputPos < 255)																		//If the USARTinput array still has room
+			USARTinput[++USARTinputPos] = USARTreceived;											//Store the numeral or whitespace in USARTinput
 		
-		}else if('a' <= USARTreceived && USARTreceived <= 'z' && USARTreceived != 'b'){											//If the received character is a (lower case) letter (except b, which is reserved for another action)
+	}else if('a' <= USARTreceived && USARTreceived <= 'z' && USARTreceived != 'b'){			//If the received character is a (lower case) letter (except b, which is reserved for another action)
 		
-		USARTcommand = USARTreceived;																							//Store the character as a command
+		USARTcommand = USARTreceived;															//Store the character as a command
 		
-		}else if(USARTreceived == 'b'){																							//b acts as a backspace key
+	}else if(USARTreceived == 'b'){															//b acts as a backspace key
 		
-		USARTinputPos--;																										
+		USARTinputPos--;																		//Remove the last character from the buffer
 		
-		}else if(USARTreceived == '\r'){																						//If the received character is a carriage return
+	}else if(USARTreceived == '\r'){														//If the received character is a carriage return, we process the input
 		
-		if(USARTinputPos >= 0){																									//If USARTinput isn't empty
-			number[0] = 0;
+		if(USARTinputPos >= 0){																	//If USARTinput isn't empty
+			number[0] = 0;																			//First we reset the variables to store the input in (this is divided in three pieces, this was necessary for programming the autonomous function, this function is no longer in the code but this input method still remains
 			number[1] = 0;
 			number[2] = 0;
 			
-			numberSize[0] = -1;
+			numberSize[0] = -1;																		//Reset the size, 0 means it has 1 character so we set it to -1 (This comes in handy later with calculating)
 			numberSize[1] = -1;
 			numberSize[2] = -1;
 			
-			numberStart[0] = 0;
+			numberStart[0] = 0;																		//Reset the start position of the numbers
+			numberStart[1] = 0;
+			numberStart[2] = 0;
 			
-			int numberPos = 0;
+			int numberPos = 0;																		//Reset the active number we are using
 			
-			for(uint8_t i = 0; i <= USARTinputPos; i++){
-				if(USARTinput[i] == ' '){
-					numberPos++;
-					numberStart[numberPos] = i + 1;
-					if(numberPos > 2){
-						break;
-						}else{
-						continue;
+			for(uint8_t i = 0; i <= USARTinputPos; i++){											//First we loop through the entire input to see how many numbers we have and where they start and how long they are
+				if(USARTinput[i] == ' '){																//If the character is a space
+					numberPos++;																			//Move to the next number
+					numberStart[numberPos] = i + 1;															//And set the next character as the beginning of the new number
+					if(numberPos > 2){																		//If this means that we have more than 2 numbers
+						break;																					//Abort, because this is not possible
 					}
-					}else{
-					numberSize[numberPos]++;
+				}else{
+					numberSize[numberPos]++;																//If it is not a space, increase the number size
 				}
 			}
 			
-			uint8_t charToInt;
-			numberPos = 0;
+			uint8_t charToInt;																		//We use this to convert the characters to integers
+			numberPos = 0;																			//Reset back to the first number
 			
-			for(uint8_t i = 0; i <= USARTinputPos; i++){
+			for(uint8_t i = 0; i <= USARTinputPos; i++){											//For the second round, we loop through the array and construct valid integers out of the array
 				
-				if(USARTinput[i] == ' '){
-					numberPos++;
-					if(numberPos > 2){
+				if(USARTinput[i] == ' '){																//If the character is a space
+					numberPos++;																			//We move to the next number
+					if(numberPos > 2){																			//Break if we move to the fourth number (place 3) because we can't have 4
 						break;
-						}else{
-						continue;
 					}
 				}
 				
-				charToInt = (int) (USARTinput[i] - '0');
-				number[numberPos] += charToInt * ( (int)(pow(10, numberSize[numberPos] + numberStart[numberPos] - i) + 0.5) );
+				charToInt = (int) (USARTinput[i] - '0');																		//Cast the character into the variable as an integer, the character value of the character 0 is subtracted from this so that the resulting integer matches with his character representation
+				number[numberPos] += charToInt * ( (int)(pow(10, numberSize[numberPos] + numberStart[numberPos] - i) + 0.5) );	//Now we add the character to the final number, but since this character might represent a number that is 10 or 100 times greater, we multiply it with a factor 10.
 				
 			}
 		}
@@ -325,10 +323,6 @@ ISR(USART0_RX_vect){																											//Triggered when data is received
 		USARTinputPos = -1;
 		
 	}
-	
-	
-	
-	
 }
 
 void writeToTerminal(){

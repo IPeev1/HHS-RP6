@@ -28,8 +28,8 @@ Code voor de RP6 ATmega32
 #define RP6_ADDRESS 3									//Set the address of this slave
 
 //Bumpers
-#define BUMPED_STOP_TIME 70000
-#define BUMPED_BACK_TIME 1000000
+#define BUMPED_STOP_TIME 70000							//Determines for how long the RP6 stands still after the bumpers are pushed
+#define BUMPED_BACK_TIME 1000000						//Determines for how long the RP6 drives backwards after the bumpers are pushed. Includes BUMPED_STOP_TIME
 //------------------------------------------------
 
 //Libraries --------------------------------------
@@ -470,7 +470,7 @@ int motorDriver(struct rp6DataBP rp6Data){							//Calculate the PWM signal for 
 }
 
 //Bumpers
-void init_bumpedData() {
+void init_bumpedData() {														//When the bumpers are pushed, motordriver uses bumpedData instead of rp6Data
 	bumpedData.driveSpeed = 0;
 	bumpedData.driveDirection = 1;
 	bumpedData.turnDirection = 0;
@@ -482,28 +482,27 @@ void init_bumpedData() {
 
 uint8_t bumperCheck() {
 	
-	static uint32_t bumperTimer = 0; //Used to determine how long the RP6 drives backwards
-	//static uint8_t enable = 0; //if 1, RP6 drives backwards
+	static uint32_t bumperTimer = 0;											//Used to determine for how long the RP6 should drive backwards
 	
-	if (getBumpers() && !arduinoData.bumperFlag) { //If one or both bumpers are pushed
-		arduinoData.bumperFlag = 1;
-		bumperTimer = micros();
+	if (getBumpers() && !arduinoData.bumperFlag) {								//If one or both bumpers are pushed
+		arduinoData.bumperFlag = 1;												//Set bumperFlag
+		bumperTimer = micros();													//Update bumperTimer to current time
 	}
 		
-	if (arduinoData.bumperFlag) {
+	if (arduinoData.bumperFlag) {												//If bumperFlag is set
 		
-		if (micros() < bumperTimer + BUMPED_STOP_TIME) {
+		if (micros() < bumperTimer + BUMPED_STOP_TIME) {						//Make an emergency stop for the time defined in BUMPED_STOP_TIME
 			bumpedData.driveSpeed = 0;
 			bumpedData.accelerationRate = 5000;
-		} else if (micros() < bumperTimer + BUMPED_BACK_TIME) {
-			bumpedData.driveSpeed = 30;
+		} else if (micros() < bumperTimer + BUMPED_BACK_TIME) {					//Drive backwards for the time defined in BUMPED_BACK_TIME (includes BUMPED_STOP_TIME)
+			bumpedData.driveSpeed = 30;											//The speed is always 30 when reacting to bumpers
 			bumpedData.driveDirection = 0;
-			bumpedData.accelerationRate = rp6Data.accelerationRate;
+			bumpedData.accelerationRate = rp6Data.accelerationRate;				//accelerationRate is as set in rp6Data
 		} else {
-			arduinoData.bumperFlag = 0;
+			arduinoData.bumperFlag = 0;											//When BUMPED_BACK_TIME has passed, reset bumperFlag
 		}
 	}
 	
-	return arduinoData.bumperFlag;
+	return arduinoData.bumperFlag;												//Return whether bumperFlag is set or not
 }
 //------------------------------------------------

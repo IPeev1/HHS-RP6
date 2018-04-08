@@ -1,13 +1,13 @@
 /*
- * matthijs_testFunctions.h
+ * USART.h
  *
  * Created: 3/14/2018 10:12:38 PM
  *  Author: mc_he
  */ 
 
 
-#ifndef MATTHIJS_TESTFUNCTIONS_H_
-#define MATTHIJS_TESTFUNCTIONS_H_
+#ifndef USART_H_
+#define USART_H_
 
 
 void writeChar(char x);
@@ -18,4 +18,4 @@ void testTransmitUSART(char charToSend, int intToSend);
 void globalVariablesTransmitUSART(int direction, int turn, int throttle);
 
 
-#endif /* MATTHIJS_TESTFUNCTIONS_H_ */
+#endif /* USART_H_ */

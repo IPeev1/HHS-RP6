@@ -19,15 +19,15 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING
   7 .debug_abbrev 000007c1  00000000  00000000  000025ec  2**0
                   CONTENTS, READONLY, DEBUGGING
-  8 .debug_line   000009ad  00000000  00000000  00002dad  2**0
+  8 .debug_line   00000971  00000000  00000000  00002dad  2**0
                   CONTENTS, READONLY, DEBUGGING
-  9 .debug_frame  000002ec  00000000  00000000  0000375c  2**2
+  9 .debug_frame  000002ec  00000000  00000000  00003720  2**2
                   CONTENTS, READONLY, DEBUGGING
- 10 .debug_str    00000616  00000000  00000000  00003a48  2**0
+ 10 .debug_str    0000060d  00000000  00000000  00003a0c  2**0
                   CONTENTS, READONLY, DEBUGGING
- 11 .debug_loc    00000a8e  00000000  00000000  0000405e  2**0
+ 11 .debug_loc    00000a8e  00000000  00000000  00004019  2**0
                   CONTENTS, READONLY, DEBUGGING
- 12 .debug_ranges 000000b8  00000000  00000000  00004aec  2**0
+ 12 .debug_ranges 000000b8  00000000  00000000  00004aa7  2**0
                   CONTENTS, READONLY, DEBUGGING
 
 Disassembly of section .text:
@@ -2269,7 +2269,7 @@ int motorDriver(struct rp6DataBP rp6Data){							//Calculate the PWM signal for 
 00001118 <init_bumpedData>:
 
 //Bumpers
-void init_bumpedData() {
+void init_bumpedData() {														//When the bumpers are pushed, motordriver uses bumpedData instead of rp6Data
 	bumpedData.driveSpeed = 0;
     1118:	ed eb       	ldi	r30, 0xBD	; 189
     111a:	f0 e0       	ldi	r31, 0x00	; 0
@@ -2339,10 +2339,9 @@ uint8_t bumperCheck() {
     1184:	0f be       	out	0x3f, r0	; 63
     1186:	cd bf       	out	0x3d, r28	; 61
 	
-	static uint32_t bumperTimer = 0; //Used to determine how long the RP6 drives backwards
-	//static uint8_t enable = 0; //if 1, RP6 drives backwards
+	static uint32_t bumperTimer = 0;											//Used to determine for how long the RP6 should drive backwards
 	
-	if (getBumpers() && !arduinoData.bumperFlag) { //If one or both bumpers are pushed
+	if (getBumpers() && !arduinoData.bumperFlag) {								//If one or both bumpers are pushed
     1188:	0e 94 5b 00 	call	0xb6	; 0xb6 <getBumpers>
     118c:	89 2b       	or	r24, r25
     118e:	b1 f0       	breq	.+44     	; 0x11bc <bumperCheck+0x68>
@@ -2350,12 +2349,12 @@ uint8_t bumperCheck() {
     1194:	90 91 87 00 	lds	r25, 0x0087	; 0x800087 <arduinoData+0x1>
     1198:	89 2b       	or	r24, r25
     119a:	b9 f4       	brne	.+46     	; 0x11ca <bumperCheck+0x76>
-		arduinoData.bumperFlag = 1;
+		arduinoData.bumperFlag = 1;												//Set bumperFlag
     119c:	81 e0       	ldi	r24, 0x01	; 1
     119e:	90 e0       	ldi	r25, 0x00	; 0
     11a0:	90 93 87 00 	sts	0x0087, r25	; 0x800087 <arduinoData+0x1>
     11a4:	80 93 86 00 	sts	0x0086, r24	; 0x800086 <arduinoData>
-		bumperTimer = micros();
+		bumperTimer = micros();													//Update bumperTimer to current time
     11a8:	0e 94 c6 00 	call	0x18c	; 0x18c <micros>
     11ac:	20 93 66 00 	sts	0x0066, r18	; 0x800066 <__data_end>
     11b0:	30 93 67 00 	sts	0x0067, r19	; 0x800067 <__data_end+0x1>
@@ -2363,14 +2362,14 @@ uint8_t bumperCheck() {
     11b8:	50 93 69 00 	sts	0x0069, r21	; 0x800069 <__data_end+0x3>
 	}
 		
-	if (arduinoData.bumperFlag) {
+	if (arduinoData.bumperFlag) {												//If bumperFlag is set
     11bc:	80 91 86 00 	lds	r24, 0x0086	; 0x800086 <arduinoData>
     11c0:	90 91 87 00 	lds	r25, 0x0087	; 0x800087 <arduinoData+0x1>
     11c4:	89 2b       	or	r24, r25
     11c6:	09 f4       	brne	.+2      	; 0x11ca <bumperCheck+0x76>
     11c8:	5a c0       	rjmp	.+180    	; 0x127e <bumperCheck+0x12a>
 		
-		if (micros() < bumperTimer + BUMPED_STOP_TIME) {
+		if (micros() < bumperTimer + BUMPED_STOP_TIME) {						//Make an emergency stop for the time defined in BUMPED_STOP_TIME
     11ca:	0e 94 c6 00 	call	0x18c	; 0x18c <micros>
     11ce:	f2 2f       	mov	r31, r18
     11d0:	e3 2f       	mov	r30, r19
@@ -2413,7 +2412,7 @@ uint8_t bumperCheck() {
     1220:	97 83       	std	Z+7, r25	; 0x07
     1222:	86 83       	std	Z+6, r24	; 0x06
     1224:	2c c0       	rjmp	.+88     	; 0x127e <bumperCheck+0x12a>
-		} else if (micros() < bumperTimer + BUMPED_BACK_TIME) {
+		} else if (micros() < bumperTimer + BUMPED_BACK_TIME) {					//Drive backwards for the time defined in BUMPED_BACK_TIME (includes BUMPED_STOP_TIME)
     1226:	0e 94 c6 00 	call	0x18c	; 0x18c <micros>
     122a:	e0 e4       	ldi	r30, 0x40	; 64
     122c:	4e 0e       	add	r4, r30
@@ -2434,7 +2433,7 @@ uint8_t bumperCheck() {
     124a:	10 e0       	ldi	r17, 0x00	; 0
     124c:	0e 94 ab 0b 	call	0x1756	; 0x1756 <__cmpdi2>
     1250:	90 f4       	brcc	.+36     	; 0x1276 <bumperCheck+0x122>
-			bumpedData.driveSpeed = 30;
+			bumpedData.driveSpeed = 30;											//The speed is always 30 when reacting to bumpers
     1252:	ed eb       	ldi	r30, 0xBD	; 189
     1254:	f0 e0       	ldi	r31, 0x00	; 0
     1256:	8e e1       	ldi	r24, 0x1E	; 30
@@ -2447,20 +2446,20 @@ uint8_t bumperCheck() {
     1264:	b3 83       	std	Z+3, r27	; 0x03
 			bumpedData.driveDirection = 0;
     1266:	14 82       	std	Z+4, r1	; 0x04
-			bumpedData.accelerationRate = rp6Data.accelerationRate;
+			bumpedData.accelerationRate = rp6Data.accelerationRate;				//accelerationRate is as set in rp6Data
     1268:	80 91 a3 00 	lds	r24, 0x00A3	; 0x8000a3 <rp6Data+0x6>
     126c:	90 91 a4 00 	lds	r25, 0x00A4	; 0x8000a4 <rp6Data+0x7>
     1270:	97 83       	std	Z+7, r25	; 0x07
     1272:	86 83       	std	Z+6, r24	; 0x06
     1274:	04 c0       	rjmp	.+8      	; 0x127e <bumperCheck+0x12a>
 		} else {
-			arduinoData.bumperFlag = 0;
+			arduinoData.bumperFlag = 0;											//When BUMPED_BACK_TIME has passed, reset bumperFlag
     1276:	10 92 87 00 	sts	0x0087, r1	; 0x800087 <arduinoData+0x1>
     127a:	10 92 86 00 	sts	0x0086, r1	; 0x800086 <arduinoData>
 		}
 	}
 	
-	return arduinoData.bumperFlag;
+	return arduinoData.bumperFlag;												//Return whether bumperFlag is set or not
 }
     127e:	80 91 86 00 	lds	r24, 0x0086	; 0x800086 <arduinoData>
     1282:	28 96       	adiw	r28, 0x08	; 8

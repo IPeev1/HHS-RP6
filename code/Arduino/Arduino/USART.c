@@ -4,24 +4,24 @@
  * Created: 3/14/2018 10:11:11 PM
  *  Author: mc_he
  */ 
-#include "matthijs_testFunctions.h"
+#include "USART.h"
 #include <avr/io.h>
 #include <stdlib.h>
 
-void writeChar(char x) { //Sends char x over serial communication
-	while(~UCSR0A & (1 << UDRE0)); //Wait until UDRE0 is set
+void writeChar(char x) {			//Sends char x over serial communication
+	while(~UCSR0A & (1 << UDRE0));	//Wait until UDRE0 is set
 	UDR0 = x;
 }
 
-void writeString(char st[]) { //Sends char array over serial communication. Dependent on writeChar()
-	for(uint8_t i = 0 ; st[i] != 0 ; i++) {
+void writeString(char st[]) {					//Sends char array over serial communication. Dependent on writeChar()
+	for(uint8_t i = 0 ; st[i] != 0 ; i++) {		//Cycles through every char in st
 		writeChar( st[i] );
 	}
 }
 
-void writeInt(int i) { //Sends integer i over serial communication. Dependent on writeString()
-	char buffer[8];
-	itoa(i,buffer,10); //Converts i to a string
+void writeInt(int i) {		//Sends integer i over serial communication. Dependent on writeString()
+	char buffer[8];			//Buffer for the string representation of i
+	itoa(i,buffer,10);		//Converts i to a string
 	writeString(buffer);
 }
 

@@ -32,29 +32,25 @@ Code voor de Arduino Mega ATmega2560
 #define TWISendACK()		(TWCR = (1<<TWINT)|(1<<TWEN)|(1<<TWIE)|(1<<TWEA))
 #define TWISendNACK()		(TWCR = (1<<TWINT)|(1<<TWEN)|(1<<TWIE))					//--^
 
-//USART
-#define USART_INTERRUPT_VECTOR USART0_RX_vect
-//-------------------------------------------------
-
 //Libraries ---------------------------------------
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include <stdlib.h>
 #include <math.h>
-#include "matthijs_testFunctions.h"							//Contains functions for transmitting over USART
+#include "USART.h"
 #include "ultrasonicSensor.h"
-#include "musicBox.h"
+#include "backBeep.h"
 //-------------------------------------------------
 
 //Global variables --------------------------------
 //Timers (used with micros function)
-uint32_t writeTerminalTimer = 0;
-uint32_t writeTerminalTimerSpeed = 250000;
-uint32_t ultrasonicTimer = 0;
-uint32_t ultrasonicTimerSpeed = 100000;
-uint32_t backBeepTimer = 0;
-uint32_t backBeepSpeed = 500000;
+uint32_t writeTerminalTimer = 0;							//Stores the time when writeToTerminal() is allowed to be executed again
+uint32_t writeTerminalTimerSpeed = 250000;					//The time in microseconds that must be between executions of writeToTerminal()
+uint32_t ultrasonicTimer = 0;								//Stores the time when checkUltrasonic() is allowed to be executed again
+uint32_t ultrasonicTimerSpeed = 100000;						//The time in microseconds that must be between executions of checkUltrasonic()
+uint32_t backBeepTimer = 0;									//Stores the time when beeper() is allowed to be executed again
+uint32_t backBeepSpeed = 500000;							//The time in microseconds that must be between executions of beeper()
 
 //Micros
 volatile uint64_t t3TotalOverflow;							//Track the total overflows to calculate the time
@@ -128,10 +124,10 @@ void readFromCompass();										//Read data from the compass
 void turnSignal();
 
 //Ultrasonic
-void checkUltrasonic();
+void checkUltrasonic();										//Check the distance as supplied by the ultrasonic sensor and act accordingly
 
 //Beeper
-void beeper();
+void beeper();												//Toggle the beeper when necessary
 //------------------------------------------------
 
 ////////////////// MAIN PROGRAM //////////////////
@@ -200,29 +196,29 @@ void init_USART(){
 	UBRR0 = 16;										//Baud rate 57600
 }
 
-ISR(USART_INTERRUPT_VECTOR){
+ISR(USART0_RX_vect){																											//Triggered when data is received over USART (which includes the xBee module)
 	static uint16_t number[3] = {0,0,0};
 	static int numberSize[3] = {0,0,0};
 	static int numberStart[3] = {0,0,0};
 	
-	USARTreceived = UDR0;
+	USARTreceived = UDR0;																										//Store the received character in USARTreceived
 	
-	if(('0' <= USARTreceived && USARTreceived <= '9') || USARTreceived == ' '){
+	if(('0' <= USARTreceived && USARTreceived <= '9') || USARTreceived == ' '){													//If the character is a numeral or a whitespace
 		
-		if(USARTinputPos < 255)
-		USARTinput[++USARTinputPos] = USARTreceived;
+		if(USARTinputPos < 255)																									//If the USARTinput array still has room
+		USARTinput[++USARTinputPos] = USARTreceived;																			//Store the numeral or whitespace in USARTinput
 		
-		}else if('a' <= USARTreceived && USARTreceived <= 'z' && USARTreceived != 'b'){
+		}else if('a' <= USARTreceived && USARTreceived <= 'z' && USARTreceived != 'b'){											//If the received character is a (lower case) letter (except b, which is reserved for another action)
 		
-		USARTcommand = USARTreceived;
+		USARTcommand = USARTreceived;																							//Store the character as a command
 		
-		}else if(USARTreceived == 'b'){
+		}else if(USARTreceived == 'b'){																							//b acts as a backspace key
 		
-		USARTinputPos--;
+		USARTinputPos--;																										
 		
-		}else if(USARTreceived == '\r'){
+		}else if(USARTreceived == '\r'){																						//If the received character is a carriage return
 		
-		if(USARTinputPos >= 0){
+		if(USARTinputPos >= 0){																									//If USARTinput isn't empty
 			number[0] = 0;
 			number[1] = 0;
 			number[2] = 0;
@@ -269,9 +265,9 @@ ISR(USART_INTERRUPT_VECTOR){
 			}
 		}
 		
-		if(USARTcommand){
+		if(USARTcommand){																										//If a command was received
 			switch(USARTcommand){
-				case 'w':
+				case 'w':																										//If the command was 'w', toggle the driveDirection between 1 (forward) and 0 (stationary)
 				if (rp6Data.driveDirection == 1) {
 					rp6Data.driveDirection = 0;
 					} else {
@@ -279,7 +275,7 @@ ISR(USART_INTERRUPT_VECTOR){
 				}
 				break;
 				
-				case 's':
+				case 's':																										//If the command was 's', toggle the driveDirection between -1 (backwards) and 0 (stationary)
 				if (rp6Data.driveDirection == -1) {
 					rp6Data.driveDirection = 0;
 					} else {
@@ -287,7 +283,7 @@ ISR(USART_INTERRUPT_VECTOR){
 				}
 				break;
 				
-				case 'a':
+				case 'a':																										//If the command was 'a', toggle the turnDirection between -1 (left) and 0 (straight)
 				if (rp6Data.turnDirection == -1) {
 					rp6Data.turnDirection = 0;
 					} else {
@@ -295,7 +291,7 @@ ISR(USART_INTERRUPT_VECTOR){
 				}
 				break;
 				
-				case 'd':
+				case 'd':																										//If the command was 'd', toggle the turnDirection between 1 (right) and 0 (straight)
 				if (rp6Data.turnDirection == 1) {
 					rp6Data.turnDirection = 0;
 					} else {
@@ -303,21 +299,21 @@ ISR(USART_INTERRUPT_VECTOR){
 				}
 				break;
 				
-				case 't':
+				case 't':																										//If the command was 't', pass the contents of number[0] to driveSpeed
 				if (number[0] <= 100) {
 					rp6Data.driveSpeed = number[0];
 				}
 				break;
 				
-				case 'r':
+				case 'r':																										//If the command was 'r', pass the contents of number[0] to turnRate
 				rp6Data.turnRate = number[0];
 				break;
 				
-				case 'q':
+				case 'q':																										//If the command was 'q', pass the contents of number[0] to accelerationRate
 				rp6Data.accelerationRate = number[0];
 				break;
 				
-				case 'z':
+				case 'z':																										//If the command was 'z', reset driveSpeed, turnDirection and driveDirection (acts as emergency break)
 				rp6Data.driveSpeed = 0;
 				rp6Data.turnDirection = 0;
 				rp6Data.driveDirection = 0;
@@ -325,7 +321,7 @@ ISR(USART_INTERRUPT_VECTOR){
 			}
 		}
 		
-		USARTcommand = 0;
+		USARTcommand = 0;																										//Clear USARTcommand and USARTinput
 		USARTinputPos = -1;
 		
 	}
@@ -336,7 +332,7 @@ ISR(USART_INTERRUPT_VECTOR){
 }
 
 void writeToTerminal(){
-	if (writeTerminalTimer < micros()) {
+	if (writeTerminalTimer < micros()) {										//Triggers only when enough time has passed, as set in writeTerminalTimerSpeed
 		writeString("\f\r");
 		
 		writeString("Distance to object: ");
@@ -373,7 +369,7 @@ void writeToTerminal(){
 			}
 		}
 		
-		writeTerminalTimer = micros() + writeTerminalTimerSpeed;
+		writeTerminalTimer = micros() + writeTerminalTimerSpeed;				//Update writeTerminalTimer to prevent writeToTerminal() being executed too often
 	}
 }
 
@@ -620,29 +616,29 @@ void turnSignal(){
 
 //Ultrasonic
 void checkUltrasonic(){
-	if(ultrasonicTimer < micros()){
+	if(ultrasonicTimer < micros()){																					//Triggers only when enough time has passed, as set in backBeepTimer
 		
-		uint16_t distance = ultrasonicSensor();
-		static int stopState = 0;
+		uint16_t distance = ultrasonicSensor();																		//Stores the current distance to an object according to ultrasonicSensor()
+		static int stopState = 0;																					
 		static uint16_t tempAcceleration;
 		
 		if(distance > 400 && stopState == 1){
 			rp6Data.accelerationRate = tempAcceleration;
-			}else if(distance > 300 && stopState == 2){
+		}else if(distance > 300 && stopState == 2){
 			stopState = 0;
 		}
 		
 		if(distance < 400 && distance > 300 && rp6Data.driveSpeed > 40 && rp6Data.driveDirection == 1){
 			rp6Data.driveSpeed = 40;
-			}else if(distance < 300 && distance > 85 && rp6Data.driveSpeed > 25 && rp6Data.driveDirection == 1){
+		}else if(distance < 300 && distance > 85 && rp6Data.driveSpeed > 25 && rp6Data.driveDirection == 1){
 			rp6Data.driveSpeed = 25;
-			}else if(distance < 85 && rp6Data.driveDirection == 1){
+		}else if(distance < 85 && rp6Data.driveDirection == 1){
 			if(stopState == 0){
 				tempAcceleration = rp6Data.accelerationRate;
 				rp6Data.accelerationRate = 5000;
 				rp6Data.driveSpeed = 0;
 				stopState = 1;
-				}else if(stopState == 1){
+			}else if(stopState == 1){
 				rp6Data.accelerationRate = tempAcceleration;
 				stopState = 2;
 			}
@@ -654,16 +650,14 @@ void checkUltrasonic(){
 
 //Beeper
 void beeper(){
-	if (backBeepTimer < micros()) {
-		if ((rp6Data.driveDirection == -1 && rp6Data.driveSpeed > 20)  || arduinoData.bumperFlag) {
+	if (backBeepTimer < micros()) {																		//Triggers only when enough time has passed, as set in backBeepTimer
+		if ((rp6Data.driveDirection == -1 && rp6Data.driveSpeed > 20)  || arduinoData.bumperFlag) {		//The beeper is enabled when the RP6 is driving backwards. If speed is under 20, the RP6 doesn't move, so the beeper is disabled.
 			DDRH ^= (1 << BEEPER);
-			backBeepTimer = micros() + backBeepSpeed;
-			} else {
-			DDRH &= ~(1 << BEEPER);
+			backBeepTimer = micros() + backBeepSpeed;													//Update backBeepTimer to ensure the correct timing of the beeping
 		}
 	}
 	
-	if (rp6Data.driveDirection != -1 && !arduinoData.bumperFlag) {
+	if (rp6Data.driveDirection != -1 && !arduinoData.bumperFlag) {										//Turn off the beeper when not driving backwards
 		DDRH &= ~(1 << BEEPER);
 	}
 }

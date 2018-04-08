@@ -584,25 +584,25 @@ void readFromCompass(){														//Read data from the compass
 
 //Blinkers
 void turnSignal(){
-	static uint32_t turnSignalDelay = 500000;
+	static uint32_t turnSignalDelay = 500000;						// Duration light is on and off (1Hz)
 	static uint32_t turnSignalStart = 0;
 	
-	DDRC |= (1 << PINC1);
-	DDRD |= (1 << PIND7);
+	DDRC |= (1 << PINC1);											// Set PINC1 as output
+	DDRD |= (1 << PIND7);											// Set PIND7 as output
 	
-	if(rp6Data.turnDirection == -1){
-		if(turnSignalStart < micros()){
-			PORTC ^= (1 << PINC1);	
-			PORTD &= ~(1 << PIND7);
-			turnSignalStart = micros() + turnSignalDelay;
+	if(rp6Data.turnDirection == -1){								//check if RP6 is turning left
+		if(turnSignalStart < micros()){								//check if switch has te be toggled
+			PORTC ^= (1 << PINC1);									//Toggle PINC1 high/low
+			PORTD &= ~(1 << PIND7);									//Set PIND7 low
+			turnSignalStart = micros() + turnSignalDelay;			//Add delay to current time
 		}
-	}else if(rp6Data.turnDirection == 1){
-		if(turnSignalStart < micros()){
-			PORTC &= ~(1 << PINC1);
-			PORTD ^= (1 << PIND7);
-			turnSignalStart = micros() + turnSignalDelay;
+	}else if(rp6Data.turnDirection == 1){							//check if RP6 is turning left
+		if(turnSignalStart < micros()){								//check ìf switch has to be toggled
+			PORTC &= ~(1 << PINC1);									//Toggle PINC1 high/low
+			PORTD ^= (1 << PIND7);									//Set PINC1 low
+			turnSignalStart = micros() + turnSignalDelay;			//Add delay to current time
 		}
-	}else{
+	}else{															//If RP6 is not turning set both PINC1 an PIND7 low
 		PORTC &= ~(1 << PINC1);
 		PORTD &= ~(1 << PIND7);
 	}
